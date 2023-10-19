@@ -63,6 +63,10 @@ data <- reactive({
   return(data)
 })
 
+# XXXX Data Preprocess
+
+# XXXX Data Preprocess
+
 # TODO: Title
 ui <- navbarPage("TODO: Title",
                  # Hotel Page

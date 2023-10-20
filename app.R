@@ -5,6 +5,8 @@ library(leaflet)
 library(shinyWidgets)
 library(tidyverse)
 library(readr)
+library(httr)
+library(jsonlite)
 
 # Hotel Data Preprocess
 # Read the 'listings.csv' file and filter the data for listings in Melbourne
@@ -81,6 +83,21 @@ data <- reactive({
   return(data)
 })
 
+api_url <- "https://api.openweathermap.org/data/3.0/onecall?lat=-37.815227&units=metric&lon=144.963611&appid=3696ab6dee1baaf964285dc399f69417"
+response <- GET(api_url)
+weather_data <- fromJSON(api_url)
+current_data <- weather_data$current
+temperature <- current_data$temp
+feelslike <- current_data$feels_like
+pressure <- current_data$pressure
+humidity <- current_data$humidity
+uvi <- current_data$uvi
+clouds <- current_data$clouds
+weather <- current_data$weather
+weather_main <- weather$main
+weather_description <- weather$description
+weather_icon_url <- paste0("https://openweathermap.org/img/wn/", weather$icon, ".png")
+
 # XXXX Data Preprocess
 
 # XXXX Data Preprocess
@@ -139,8 +156,19 @@ ui <- navbarPage("TODO: Title",
                    tabPanel("Places of Interest", fluidPage(
                      sidebarLayout(
                        sidebarPanel(
-                         # TODO: sidebarPanel
-                         ), 
+                         h2("Current Weather"),
+                         textOutput("weather_main"),
+                         textOutput("temperature"),
+                         textOutput("feelslike"),
+                         textOutput("humidity"),
+                         textOutput("pressure"),
+                         textOutput("uvi"),
+                         textOutput("clouds"),
+                         textOutput("weather_description"),
+                         imageOutput("weather_icon"),
+                         style = "max-width: 400px; margin: 0 auto;",
+                         class = "container"
+                       ), 
                        mainPanel(
                          leafletOutput("poi_map")
                        )
@@ -278,6 +306,18 @@ server <- function(input, output, session) {
       addMarkers(lng = ~Longitude, lat = ~Latitude, popup = ~paste(Title, ": ", Description))
     m
   })
+  
+  output$weather_main <- renderText(paste("Weather: ", weather_main))
+  output$temperature <- renderText(paste("Temperature: ", temperature, "°C"))
+  output$pressure <- renderText(paste("Pressure: ", pressure, "hPa"))
+  output$humidity <- renderText(paste("Humidity: ", humidity, "%"))
+  output$clouds <- renderText(paste("clouds: ", clouds, "%"))
+  output$uvi <- renderText(paste("uvi: ", uvi))
+  output$feelslike <- renderText(paste("Feels like: ", feelslike, "°C"))
+  output$weather_description <- renderText(paste("Weather Description: ", weather_description))
+  output$weather_icon <- renderImage({
+    list(src = weather_icon_url, contentType = "image/png")
+  }, deleteFile = FALSE)
 }
 
 shinyApp(ui, server, options=list(launch.browser=TRUE))

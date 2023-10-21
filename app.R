@@ -12,7 +12,6 @@ library(leaflet)
 library(shinyWidgets)
 library(tidyverse)
 library(readr)
-<<<<<<< Updated upstream
 library(httr)
 library(jsonlite)
 library(ggplot2)
@@ -21,11 +20,9 @@ library(dplyr)
 library(maps)
 library(scales)
 library(shinydashboard)
-=======
 library(sf)
 library(rgdal)
 library(shinyjs)
->>>>>>> Stashed changes
 
 # Hotel Data Preprocess
 # Read the 'listings.csv' file and filter the data for listings in Melbourne
@@ -102,7 +99,6 @@ data <- reactive({
   return(data)
 })
 
-<<<<<<< Updated upstream
 api_url <- "https://api.openweathermap.org/data/3.0/onecall?lat=-37.815227&units=metric&lon=144.963611&appid=3696ab6dee1baaf964285dc399f69417"
 response <- GET(api_url)
 weather_data <- fromJSON(api_url)
@@ -143,12 +139,13 @@ ct_restaurants$Seating.type <- sub(".*- ", "", ct_restaurants$Seating.type)
 restaurant_group <- ct_restaurants %>%
   group_by(Industry..ANZSIC4..description) %>% 
   summarise(Num = n())
+
 customIcon <- makeIcon(
   iconUrl = "data/restaurant.png",
   iconWidth = 30,  # 图标宽度
   iconHeight = 30  # 图标高度
 )
-=======
+
 # Transport Data Preprocess
 
 # Read transportation data
@@ -162,7 +159,6 @@ max_route_length_bus <- ceiling(max(bus_data$ROUTE_KM, na.rm = TRUE))
 
 # Calculate the max route length for TramRoutes
 max_route_length_tram <- ceiling(max(tram_data$ROUTE_KM, na.rm = TRUE))
->>>>>>> Stashed changes
 
 # XXXX Data Preprocess
 
@@ -239,7 +235,6 @@ ui <- navbarPage("TODO: Title",
                       )
                      )
                     ),
-<<<<<<< Updated upstream
                  # restaurant Page
                  tabPanel(
                    "Resaurants in Melbourne CBD",
@@ -275,7 +270,6 @@ ui <- navbarPage("TODO: Title",
                      )
                    )
                  ),
-=======
                  
                  # Transport Page
                  tabPanel("Transportation",
@@ -405,7 +399,6 @@ ui <- navbarPage("TODO: Title",
                             )
                           )
                  )
->>>>>>> Stashed changes
 )
 
 # Server function definition
@@ -538,7 +531,6 @@ server <- function(input, output, session) {
     m
   })
   
-<<<<<<< Updated upstream
   output$weather_main <- renderText(paste("Weather: ", weather_main))
   output$temperature <- renderText(paste("Temperature: ", temperature, "°C"))
   output$pressure <- renderText(paste("Pressure: ", pressure, "hPa"))
@@ -599,12 +591,9 @@ server <- function(input, output, session) {
         lat = ~Latitude,  
         popup = ~paste("<b>Restaurant Name: </b>", Trading.name, "<br>", 
                        "<b>Seating Type: </b>", Seating.type,"<br>",
-                       "<b>Number of seats: </b>", Number.of.seats),
-        clusterOptions = markerClusterOptions(),
-        icon = customIcon
+                       "<b>Number of seats: </b>", Number.of.seats)
       )
   })
-=======
   # Tansportation Server
   session$sendCustomMessage(type = 'initialize', message = 'ready')
   
@@ -952,8 +941,6 @@ server <- function(input, output, session) {
     }
     
   })
-  
->>>>>>> Stashed changes
 }
 
   

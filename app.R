@@ -337,7 +337,6 @@ ui <- fluidPage(
     # Hotel Page
     tabPanel("Hotel", fluidPage(
       fluidRow(mainPanel(div(
-        leafletOutput("map", width = "135%", height = "85vh"),
         tags$div(
           id = "hotel_map_controls",
           class = "map-controls",
@@ -376,26 +375,19 @@ ui <- fluidPage(
             max = hotel_data$review_scores_rating %>% max(),
             value = c(3, hotel_data$review_scores_rating %>% max())
           ),
+          tags$div(id = 'mapButtonGroupBusTram',
+                   actionButton("hotelButton", "Show/Hide Plot")),
           width = 3
         )
       ),
       width = 9)),
-      fluidRow(
-        # Column 1 with plotly output element
-        column(width = 3, plotlyOutput("plot1", height = "300px")),
-        # Column 2 with plotly output element
-        column(width = 4, plotlyOutput("plot2", height = "300px")),
-        # Column 3 with plotly output element
-        column(width = 5, plotlyOutput("plot3", height = "300px"))
-      )
+      uiOutput("hotel_ui")
     )),
     
     # POI Page
     tabPanel("Places of Interest", fluidPage(mainPanel(
       div(
-        leafletOutput("poi_map", width = "150%", height = "85vh"),
-        title = 'POI Categories',
-        themes_tab,
+        uiOutput("poi_ui"),
         tags$div(
           id = "poi_map_controls",
           class = "map-controls center-image",
@@ -407,7 +399,9 @@ ui <- fluidPage(
           textOutput("pressure"),
           textOutput("uvi"),
           textOutput("clouds"),
-          textOutput("weather_description")
+          textOutput("weather_description"),
+          tags$div(id = 'mapButtonGroupBusTram',
+                   actionButton("POIButton", "Show/Hide Plot"))
         )
       )
     ))),
@@ -559,7 +553,198 @@ ui <- fluidPage(
 
 # Server function definition
 server <- function(input, output, session) {
+  output$poi_ui <- renderUI({
+    if (input$POIButton %% 2 == 0) {
+      div(id = "mapDiv", leafletOutput("poi_map", width = "150%", height = "85vh"))
+    } else {
+      div(id = "mapDiv", title='POI Categories', themes_tab)
+    }
+  })
+  
+  observe({
+    if (input$POIButton %% 2 == 0) {
+      output$poi_map <- renderLeaflet({
+        m <- leaflet(data()) %>%
+          addTiles() %>%
+          addMarkers(
+            lng = ~ Longitude,
+            lat = ~ Latitude,
+            popup = ~ paste(Title, ": ", Description),
+            clusterOptions = markerClusterOptions(),
+            icon = customIcon2
+          )
+        m
+      })
+    }
+  })
+  
+  
   # Hotel Server
+  
+  output$hotel_ui <- renderUI({
+    if (input$hotelButton %% 2 == 0) {
+      div(id = "mapDiv", leafletOutput("map", width = "100%", height = "85vh"))
+    } else {
+      fluidRow(
+        # Column 1 with plotly output element
+        column(width = 3, plotlyOutput("plot1", height = "300px")),
+        # Column 2 with plotly output element
+        column(width = 4, plotlyOutput("plot2", height = "300px")),
+        # Column 3 with plotly output element
+        column(width = 5, plotlyOutput("plot3", height = "300px"))
+      )
+    }
+  })
+  
+  observe({
+    if (input$hotelButton %% 2 == 0) {
+      output$map <- renderLeaflet({
+        # Subset hotel data based on input values
+        hotel_data_sub <-
+          hotel_data %>%
+          filter(room_type %in% input$room_type) %>%
+          filter(price <= input$price[2]) %>%
+          filter(price >= input$price[1]) %>%
+          filter(number_of_reviews <= input$number_of_reviews[2]) %>%
+          filter(number_of_reviews >= input$number_of_reviews[1]) %>%
+          filter(review_scores_rating <= input$review_scores_rating[2]) %>%
+          filter(review_scores_rating >= input$review_scores_rating[1])
+        
+        leaflet() %>%
+          # Add default tile layer
+          addTiles() %>%
+          # Set initial view based on mean lat/lng
+          setView(
+            lng = mean(hotel_data_sub$longitude),
+            lat = mean(hotel_data_sub$latitude),
+            zoom = 17
+          ) %>%
+          # Add markers for level1
+          addMarkers(
+            lng = hotel_data_sub %>% filter(level == "level1") %>% pull(longitude),
+            lat = hotel_data_sub %>% filter(level == "level1") %>% pull(latitude),
+            popup = hotel_data_sub %>% filter(level == "level1") %>% pull(info),
+            group = "level1",
+            clusterOptions = markerClusterOptions(),
+            icon = customIcon1
+          ) %>%
+          # Add markers for level2
+          addMarkers(
+            lng = hotel_data_sub %>% filter(level == "level2") %>% pull(longitude),
+            lat = hotel_data_sub %>% filter(level == "level2") %>% pull(latitude),
+            popup = hotel_data_sub %>% filter(level == "level2") %>% pull(info),
+            group = "level2",
+            clusterOptions = markerClusterOptions(),
+            icon = customIcon1
+          ) %>%
+          # Add markers for level3
+          addMarkers(
+            lng = hotel_data_sub %>% filter(level == "level3") %>% pull(longitude),
+            lat = hotel_data_sub %>% filter(level == "level3") %>% pull(latitude),
+            popup = hotel_data_sub %>% filter(level == "level3") %>% pull(info),
+            group = "level3",
+            clusterOptions = markerClusterOptions(),
+            icon = customIcon1
+          ) %>%
+          # Set zoom levels for group level3
+          groupOptions("level3", zoomLevels = 18:20) %>%
+          # Set zoom levels for group level2
+          groupOptions("level2", zoomLevels = 16:20)
+      })
+    } else {
+      # Render plotly output for plot2
+      output$plot2 <- renderPlotly({
+        # Filter hotel data based on input values
+        hotel_data %>%
+          filter(room_type %in% input$room_type) %>%
+          filter(price <= input$price[2]) %>%
+          filter(price >= input$price[1]) %>%
+          filter(number_of_reviews <= input$number_of_reviews[2]) %>%
+          filter(number_of_reviews >= input$number_of_reviews[1]) %>%
+          filter(review_scores_rating <= input$review_scores_rating[2]) %>%
+          filter(review_scores_rating >= input$review_scores_rating[1]) %>%
+          select(room_type, price) %>%
+          # Filter out extreme values using quantile
+          filter(price <= quantile(price, 0.99)) %>%
+          ggplot() +
+          geom_boxplot(aes(x = room_type, y = price, color = room_type)) +
+          theme_minimal() +
+          theme(legend.position = "none") +
+          xlab("Room Type") +
+          ylab("Price") +
+          ggtitle("Price Distribution of Different Room Type") -> p
+        # Convert plot to plotly format
+        ggplotly(p)
+      })
+      
+      # Render plotly output for plot1
+      output$plot1 <- renderPlotly({
+        # Filter hotel data based on input values
+        hotel_data %>%
+          filter(room_type %in% input$room_type) %>%
+          filter(price <= input$price[2]) %>%
+          filter(price >= input$price[1]) %>%
+          filter(number_of_reviews <= input$number_of_reviews[2]) %>%
+          filter(number_of_reviews >= input$number_of_reviews[1]) %>%
+          filter(review_scores_rating <= input$review_scores_rating[2]) %>%
+          filter(review_scores_rating >= input$review_scores_rating[1]) %>%
+          ggplot() +
+          geom_histogram(
+            aes(x = review_scores_rating),
+            bins = 60,
+            color = "white",
+            fill = "darkgreen"
+          ) +
+          theme_minimal() +
+          xlab("Rating") +
+          ylab("Frequency") +
+          ggtitle("Distribution of Review Scores") -> p
+        # Convert plot to plotly format
+        ggplotly(p)
+      })
+      
+      # Render plotly output for plot3
+      output$plot3 <- renderPlotly({
+        # Filter hotel data based on input values
+        hotel_data %>%
+          filter(room_type %in% input$room_type) %>%
+          filter(price <= input$price[2]) %>%
+          filter(price >= input$price[1]) %>%
+          filter(number_of_reviews <= input$number_of_reviews[2]) %>%
+          filter(number_of_reviews >= input$number_of_reviews[1]) %>%
+          filter(review_scores_rating <= input$review_scores_rating[2]) %>%
+          filter(review_scores_rating >= input$review_scores_rating[1]) %>%
+          # Group by host_name
+          group_by(host_name) %>%
+          # Calculate the total number of reviews for each host
+          summarise(number_of_reviews = sum(number_of_reviews)) %>%
+          # Select host_name and number_of_reviews
+          select(host_name, number_of_reviews) %>%
+          # Arrange hosts in descending order of number of reviews
+          arrange(desc(number_of_reviews)) %>%
+          # Select top 20 hosts with most reviews
+          slice(1:20) %>%
+          ggplot() +
+          geom_col(
+            aes(
+              x = reorder(host_name,-number_of_reviews),
+              y = number_of_reviews
+            ),
+            fill = "darkgreen",
+            width = 0.5
+          ) +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          ylab("Number of Reviews") +
+          xlab("Host Name") +
+          ggtitle("Top 20 Hosts with Most Number of Reviews") -> p
+        # Convert plot to plotly format
+        ggplotly(p)
+      })
+    }
+  })
+  
+  
   # Render plotly output for plot2
   output$plot2 <- renderPlotly({
     # Filter hotel data based on input values

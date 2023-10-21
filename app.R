@@ -1,27 +1,3 @@
-#install library
-list_packages <-
-  c(
-    'ggplot2',
-    'shiny',
-    'lubridate',
-    'dplyr',
-    'leaflet',
-    'maps',
-    'plotly',
-    'scales',
-    'shinydashboard',
-    'shinyWidgets',
-    'tidyverse',
-    "sf",
-    "rgdal",
-    "shinyjs",
-    "ggiraph"
-  )
-new_packages <-
-  list_packages[!(list_packages %in% installed.packages()[, "Package"])]
-if (length(new_packages))
-  install.packages(new_packages)
-
 # Load the necessary libraries
 library(plotly)
 library(shiny)

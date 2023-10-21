@@ -24,6 +24,8 @@ library(sf)
 library(rgdal)
 library(shinyjs)
 
+source('tableau-in-shiny-v1.0.R')
+
 # Hotel Data Preprocess
 # Read the 'listings.csv' file and filter the data for listings in Melbourne
 listings <- read.csv("data/listings.csv")
@@ -114,6 +116,33 @@ weather_main <- weather$main
 weather_description <- weather$description
 weather_icon_url <- paste0("https://openweathermap.org/img/wn/", weather$icon, ".png")
 
+json_data <- reactive({
+  fromJSON("data/landmarks-and-places-of-interest-including-schools-theatres-health-services-spor.json")
+})
+
+themes_tab <- tabPanel(
+  title='Themes',
+  h2('Number of different themes'),
+  splitLayout(
+    girafeOutput('plot_themes'),
+    tableauPublicViz(
+      id='tableauViz',       
+      url='https://public.tableau.com/views/POI_16978604229170/POICategories?:language=zh-CN&publish=yes&:display_count=n&:origin=viz_share_link',
+      height="300px"
+    ),
+  )
+)
+
+theme_counts <- reactive({
+  data <- json_data()
+  if (is.null(data)) {
+    return(data.frame(theme = character(0), count = numeric(0)))
+  }
+  theme_table <- table(data$theme)
+  theme_counts_df <- data.frame(theme = names(theme_table), count = as.numeric(theme_table))
+  theme_counts_df
+})
+
 # restaurants Data Preprocess
 restaurants <- read.csv("data/cafes-and-restaurants-with-seating-capacity.csv", header = T)
 ct_restaurants <- restaurants[restaurants$CLUE.small.area == "Melbourne (CBD)", ]
@@ -163,6 +192,7 @@ max_route_length_tram <- ceiling(max(tram_data$ROUTE_KM, na.rm = TRUE))
 
 # TODO: Title
 ui <- navbarPage("TODO: Title",
+                 header=setUpTableauInShiny(),
                  # Hotel Page
                  tabPanel("Hotel", fluidPage(
                    fluidRow(
@@ -229,7 +259,9 @@ ui <- navbarPage("TODO: Title",
                        class = "container"
                      ), 
                      mainPanel(
-                       leafletOutput("poi_map")
+                       leafletOutput("poi_map"),
+                       title='POI Categories',
+                       themes_tab
                      )
                    )
                  )
@@ -528,6 +560,34 @@ server <- function(input, output, session) {
       addTiles() %>%
       addMarkers(lng = ~Longitude, lat = ~Latitude, popup = ~paste(Title, ": ", Description))
     m
+  })
+  
+  output$plot_themes <- renderGirafe({
+    p <- ggplot(theme_counts()) +
+      aes(x=theme, y=count, data_id=theme) +
+      geom_bar_interactive(stat='identity', width=0.8, fill='#8f00b6') +
+      scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 10)) +
+      labs(x='Theme', y='Counts') +
+      theme(panel.background=element_blank(),
+            panel.grid.major.y=element_line(color='#e2e2e2'),
+            axis.ticks=element_blank()) +
+      ggtitle("Counts on different themes")
+    
+    girafe(ggobj=p, height_svg=3)
+  })
+  
+  # React to clicks on the bar chart
+  # (See Lab 7 (page 7.6.2) for an explanation of this code)
+  observeEvent(input$plot_themes_selected, {
+    # Clear selection from bar chart
+    session$sendCustomMessage(type='plot_themes_set', message=character(0))
+    
+    # Filter Tableau viz by the state that was clicked on the bar chart
+    theme <- input$plot_themes_selected
+    print(theme)
+    runjs(sprintf('let viz = document.getElementById("tableauViz");
+        let sheet = viz.workbook.activeSheet;
+        sheet.applyFilterAsync("Theme", ["%s"], FilterUpdateType.Replace);', theme))
   })
   
   output$weather_main <- renderText(paste("Weather: ", weather_main))

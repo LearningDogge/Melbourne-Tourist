@@ -379,21 +379,11 @@ server <- function(input, output, session) {
   
   # POI Server
   output$poi_map <- renderLeaflet({
-    m <- leaflet(data()) %>%
+    m <- leaflet(json_data) %>%
       addTiles() %>%
-      addMarkers(lng = ~Longitude, lat = ~Latitude, popup = ~paste(Title, ": ", Description)) %>%
+      addMarkers(lng = ~co_ordinates$lon, lat = ~co_ordinates$lat, popup = ~paste(feature_name, ": ", theme)) %>%
       setView(lng = 144.966, lat = -37.814, zoom = 15)
-    ###
-    #for (i in 1:length(json_data)) {
-    #  if (!is.null(json_data[i]$co_ordinates$lon) && !is.null(json_data[i]$co_ordinates$lat)) {
-    #    lon <- json_data[i]$co_ordinates$lon
-    #    lat <- json_data[i]$co_ordinates$lat
-    #    popup_text <- json_data[i]$feature_name
-
-    #    m <- addMarkers(m, lng = lon, lat = lat, icon = icon("triangle"), popup = popup_text)
-    #  }
-    #}
-    ###
+    
     m
   })
   

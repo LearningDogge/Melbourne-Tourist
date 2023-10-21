@@ -129,7 +129,7 @@ themes_tab <- tabPanel(
     tableauPublicViz(
       id='tableauViz',       
       url='https://public.tableau.com/views/POI_16978604229170/POICategories?:language=zh-CN&publish=yes&:display_count=n&:origin=viz_share_link',
-      width="400px"
+      height = "400px"
     ),
   )
 )
@@ -323,9 +323,7 @@ ui <- fluidPage(
              tabPanel("Places of Interest", fluidPage(
                mainPanel(
                  div(
-                   leafletOutput("poi_map", width = "150%", height = "85vh"),
-                   title='POI Categories',
-                   themes_tab,
+                   uiOutput("poi_ui"),
                    tags$div(id = "poi_map_controls", class = "map-controls",
                             imageOutput("weather_icon"),
                             textOutput("weather_main"),
@@ -335,7 +333,8 @@ ui <- fluidPage(
                             textOutput("pressure"),
                             textOutput("uvi"),
                             textOutput("clouds"),
-                            textOutput("weather_description")
+                            textOutput("weather_description"),
+                            actionButton("toggleMap", "Show Plot"),
                    )
                  )
                )
@@ -577,7 +576,7 @@ server <- function(input, output, session) {
         hjust = 1
       ))
     
-    girafe(ggobj=p, height_svg=3)
+    girafe(ggobj=p, height_svg=6)
   })
   
   # React to clicks on the bar chart
@@ -605,6 +604,27 @@ server <- function(input, output, session) {
   output$weather_icon <- renderImage({
     list(src = weather_icon_url, contentType = "image/png")
   }, deleteFile = FALSE)
+  
+  output$poi_ui <- renderUI({
+    if (input$toggleMap %% 2 == 1) {
+      div(id = "mapDiv", leafletOutput("poi_map", width = "150%", height = "85vh"))
+    } else {
+      div(id = "mapDiv", title='POI Categories', themes_tab)
+    }
+  })
+  
+  observe({
+    if (input$toggleMap %% 2 == 1) {
+      output$poi_map <- renderLeaflet({
+        m <- leaflet(data()) %>%
+          addTiles() %>%
+          addMarkers(lng = ~Longitude, lat = ~Latitude, popup = ~paste(Title, ": ", Description),
+                     clusterOptions = markerClusterOptions(),
+                     icon = customIcon2)
+        m
+      })
+    }
+  })
   
   #Restaurant Server
   #number text

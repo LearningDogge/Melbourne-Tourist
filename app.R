@@ -1,3 +1,10 @@
+#install library
+list_packages <- c('ggplot2', 'shiny', 'lubridate', 'dplyr', 'leaflet', 'maps', 
+                   'plotly', 'scales', 'shinydashboard', 'shinyWidgets', 
+                   'tidyverse')
+new_packages <- list_packages[!(list_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages) 
+
 # Load the necessary libraries
 library(plotly)
 library(shiny)
@@ -7,6 +14,12 @@ library(tidyverse)
 library(readr)
 library(httr)
 library(jsonlite)
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+library(maps)
+library(scales)
+library(shinydashboard)
 
 # Hotel Data Preprocess
 # Read the 'listings.csv' file and filter the data for listings in Melbourne
@@ -98,7 +111,31 @@ weather_main <- weather$main
 weather_description <- weather$description
 weather_icon_url <- paste0("https://openweathermap.org/img/wn/", weather$icon, ".png")
 
-# XXXX Data Preprocess
+# restaurants Data Preprocess
+restaurants <- read.csv("data/cafes-and-restaurants-with-seating-capacity.csv", header = T)
+ct_restaurants <- restaurants[restaurants$CLUE.small.area == "Melbourne (CBD)", ]
+ct_restaurants <- ct_restaurants[!is.na(ct_restaurants$Longitude), ]
+ct_restaurants <- ct_restaurants[!is.na(ct_restaurants$Latitude), ]
+ct_restaurants <- ct_restaurants[ct_restaurants$Industry..ANZSIC4..description 
+                                 == "Cafes and Restaurants" | 
+                                   ct_restaurants$Industry..ANZSIC4..description
+                                 == "Pubs, Taverns and Bars" | 
+                                   ct_restaurants$Industry..ANZSIC4..description
+                                 == "Takeaway Food Services", ]
+#filter the lastest 10 years data
+ct_restaurants <- ct_restaurants %>% 
+  filter(Census.year >= 2013)
+
+ct_restaurants <- ct_restaurants %>%
+  arrange(Location, desc(Census.year)) %>%  
+  distinct(Location, .keep_all = TRUE)  # keep the lastest year data
+
+# use sub() function to extract the content before "- "
+ct_restaurants$Seating.type <- sub(".*- ", "", ct_restaurants$Seating.type)
+
+restaurant_group <- ct_restaurants %>%
+  group_by(Industry..ANZSIC4..description) %>% 
+  summarise(Num = n())
 
 # XXXX Data Preprocess
 
@@ -174,7 +211,42 @@ ui <- navbarPage("TODO: Title",
                        )
                       )
                      )
-                    )
+                    ),
+                 # restaurant Page
+                 tabPanel(
+                   "Resaurants in Melbourne CBD",
+                   span(h6(
+                     "You can check restaurants' information by clicking on each circle."),
+                     style = "color:black"),
+                   fluidRow(
+                     valueBoxOutput("cafe"),
+                     valueBoxOutput("bar"),
+                     valueBoxOutput("takeaway"),
+                   ),
+                   sidebarLayout(
+                     sidebarPanel(
+                       span(h6("You can choose different seat type.")
+                            ,style="color:black"),
+                       radioButtons("seat", "Seat Type: ", c("Indoor","Outdoor"), 
+                                    selected = "Indoor"),
+                       span(h6("You can check different type of restaurants' information.")
+                            ,style="color:black"),
+                       selectInput(
+                         "type", 
+                         label = "Choose a type of restaurant to display",
+                         choices = restaurant_group$Industry..ANZSIC4..description,
+                         selected = "Cafes and Restaurants"
+                       ),
+                       sliderInput("number", "Choose number of seat range: ", 
+                                   min = min(ct_restaurants$Number.of.seats), 
+                                   max = max(ct_restaurants$Number.of.seats),
+                                   value = c(5, 15)),
+                     ),
+                     mainPanel(
+                       leafletOutput("map1")
+                     )
+                   )
+                 ),
 )
 
 # Server function definition
@@ -318,6 +390,58 @@ server <- function(input, output, session) {
   output$weather_icon <- renderImage({
     list(src = weather_icon_url, contentType = "image/png")
   }, deleteFile = FALSE)
+  
+  #Restaurant Server
+  #number text
+  output$cafe <- renderValueBox({
+    valueBox(
+      prettyNum(restaurant_group[restaurant_group$Industry..ANZSIC4..description 
+                                 == "Cafes and Restaurants",]$Num,big.mark = ","), 
+      "Cafes and Restaurants"
+    )
+  })
+  output$bar <- renderValueBox({
+    valueBox(
+      prettyNum(restaurant_group[restaurant_group$Industry..ANZSIC4..description 
+                                 == "Pubs, Taverns and Bars",]$Num,big.mark = ","), 
+      "Pubs, Taverns and Bars"
+    )
+  })
+  output$takeaway <- renderValueBox({
+    valueBox(
+      prettyNum(restaurant_group[restaurant_group$Industry..ANZSIC4..description 
+                                 == "Takeaway Food Services",]$Num,big.mark = ","), 
+      "Takeaway Food Services"
+    )
+  })
+  #filter restaurants
+  filtered_data <- reactive({
+    type <- input$type
+    seat <- input$seat
+    range_selected <- input$number
+    # filter data
+    filtered_df <- ct_restaurants %>%
+      filter(
+        ct_restaurants$Seating.type == seat &
+          ct_restaurants$Industry..ANZSIC4..description == type &
+          ct_restaurants$Number.of.seats >= range_selected[1] &
+          ct_restaurants$Number.of.seats <= range_selected[2]
+      )
+    
+  })
+  
+  #map
+  output$map1 <- renderLeaflet({
+    leaflet(filtered_data()) %>% 
+      addTiles() %>%
+      addMarkers(
+        lng = ~Longitude,  
+        lat = ~Latitude,  
+        popup = ~paste("<b>Restaurant Name: </b>", Trading.name, "<br>", 
+                       "<b>Seating Type: </b>", Seating.type,"<br>",
+                       "<b>Number of seats: </b>", Number.of.seats)
+      )
+  })
 }
 
 shinyApp(ui, server, options=list(launch.browser=TRUE))

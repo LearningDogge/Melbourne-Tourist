@@ -1,3 +1,25 @@
+#install library
+list_packages <-
+  c(
+    'ggplot2',
+    'shiny',
+    'lubridate',
+    'dplyr',
+    'leaflet',
+    'maps',
+    'plotly',
+    'scales',
+    'shinydashboard',
+    'shinyWidgets',
+    'tidyverse',
+    "sf",
+    "rgdal",
+    "shinyjs",
+    "ggiraph"
+  )
+new_packages <-
+  list_packages[!(list_packages %in% installed.packages()[, "Package"])]
+
 # Load the necessary libraries
 library(plotly)
 library(shiny)
@@ -226,13 +248,18 @@ bicycle_data <- st_read("data/Melbourne_Bicycle_Routes_MGA.geojson")
 tram_data <- st_read("data/PTV_METRO_TRAM_ROUTE.geojson")
 train_data <- st_read("data/trainStations.geojson")
 
-# Calculate the max route length for BusMetroRoutes
+# Calculate the max route length/stop counts for BusMetroRoutes
 max_route_length_bus <-
   ceiling(max(bus_data$ROUTE_KM, na.rm = TRUE))
+max_stop_count_bus <-
+  max(bus_data$NUM_OF_STOPS, na.rm = TRUE)
 
-# Calculate the max route length for TramRoutes
+# Calculate the max route length/stop counts for TramRoutes
 max_route_length_tram <-
   ceiling(max(tram_data$ROUTE_KM, na.rm = TRUE))
+max_stop_count_tram <-
+  max(tram_data$NUM_OF_STOPS, na.rm = TRUE)
+
 
 ######
 # UI #
@@ -496,6 +523,14 @@ ui <- fluidPage(
                 0,
                 max = max_route_length_bus,
                 value = c(0, max_route_length_bus),
+                step = 1
+              ),
+              sliderInput(
+                "stopCount",
+                "Filter by Num of Stops:",
+                min = 0,
+                max = max_stop_count_bus,
+                value = c(0, max_stop_count_bus),
                 step = 1
               ),
               selectInput("startStation", "Choose Start Station:", "", selected = ""),
@@ -1069,12 +1104,18 @@ server <- function(input, output, session) {
       updateSliderInput(session,
                         "routeLength",
                         max = max_route_length_bus)
+      updateSliderInput(session,
+                        "stopCount",
+                        max = max_stop_count_bus)
     } else if (selected_transport_type == "Tram") {
       start_stations <- unique(tram_data$FIRST_STOP_NAME)
       end_stations <- unique(tram_data$LAST_STOP_NAME)
       updateSliderInput(session,
                         "routeLength",
                         max = max_route_length_tram)
+      updateSliderInput(session,
+                        "stopCount",
+                        max = max_stop_count_tram)
     }
     updateSelectInput(session, "startStation", choices = c("", start_stations))
     updateSelectInput(session, "endStation", choices = c("", end_stations))
@@ -1214,6 +1255,10 @@ server <- function(input, output, session) {
       data <-
         data[data$ROUTE_KM >= input$routeLength[1] &
                data$ROUTE_KM <= input$routeLength[2], ]
+    }
+    if (input$stopCount[1] > 0 || input$stopCount[2] < 100) {
+      data <- data[data$NUM_OF_STOPS >= input$stopCount[1] &
+                     data$NUM_OF_STOPS <= input$stopCount[2], ]
     }
     
     return(data)

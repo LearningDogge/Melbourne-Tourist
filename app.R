@@ -1,7 +1,7 @@
 #install library
 list_packages <- c('ggplot2', 'shiny', 'lubridate', 'dplyr', 'leaflet', 'maps', 
                    'plotly', 'scales', 'shinydashboard', 'shinyWidgets', 
-                   'tidyverse')
+                   'tidyverse', "sf", "rgdal", "shinyjs")
 new_packages <- list_packages[!(list_packages %in% installed.packages()[,"Package"])]
 if(length(new_packages)) install.packages(new_packages) 
 
@@ -147,7 +147,6 @@ customIcon <- makeIcon(
 )
 
 # Transport Data Preprocess
-
 # Read transportation data
 bus_data <- st_read("data/BusMetroRoutes.geojson")
 bicycle_data <- st_read("data/Melbourne_Bicycle_Routes_MGA.geojson")
@@ -211,30 +210,30 @@ ui <- navbarPage("TODO: Title",
                      # Column 3 with plotly output element
                      column(width = 5, plotlyOutput("plot3", height = "300px"))
                    ))),
-                   
-                   # POI Page
-                   tabPanel("Places of Interest", fluidPage(
-                     sidebarLayout(
-                       sidebarPanel(
-                         h2("Current Weather"),
-                         textOutput("weather_main"),
-                         textOutput("temperature"),
-                         textOutput("feelslike"),
-                         textOutput("humidity"),
-                         textOutput("pressure"),
-                         textOutput("uvi"),
-                         textOutput("clouds"),
-                         textOutput("weather_description"),
-                         imageOutput("weather_icon"),
-                         style = "max-width: 400px; margin: 0 auto;",
-                         class = "container"
-                       ), 
-                       mainPanel(
-                         leafletOutput("poi_map")
-                       )
-                      )
+                 
+                 # POI Page
+                 tabPanel("Places of Interest", fluidPage(
+                   sidebarLayout(
+                     sidebarPanel(
+                       h2("Current Weather"),
+                       textOutput("weather_main"),
+                       textOutput("temperature"),
+                       textOutput("feelslike"),
+                       textOutput("humidity"),
+                       textOutput("pressure"),
+                       textOutput("uvi"),
+                       textOutput("clouds"),
+                       textOutput("weather_description"),
+                       imageOutput("weather_icon"),
+                       style = "max-width: 400px; margin: 0 auto;",
+                       class = "container"
+                     ), 
+                     mainPanel(
+                       leafletOutput("poi_map")
                      )
-                    ),
+                   )
+                 )
+                 ),
                  # restaurant Page
                  tabPanel(
                    "Resaurants in Melbourne CBD",
@@ -567,7 +566,7 @@ server <- function(input, output, session) {
     )
   })
   #filter restaurants
-  filtered_data <- reactive({
+  filtered_data_restaurants <- reactive({
     type <- input$type
     seat <- input$seat
     range_selected <- input$number
@@ -584,16 +583,19 @@ server <- function(input, output, session) {
   
   #map
   output$map1 <- renderLeaflet({
-    leaflet(filtered_data()) %>% 
+    leaflet(filtered_data_restaurants()) %>% 
       addTiles() %>%
       addMarkers(
         lng = ~Longitude,  
         lat = ~Latitude,  
         popup = ~paste("<b>Restaurant Name: </b>", Trading.name, "<br>", 
                        "<b>Seating Type: </b>", Seating.type,"<br>",
-                       "<b>Number of seats: </b>", Number.of.seats)
+                       "<b>Number of seats: </b>", Number.of.seats),
+        clusterOptions = markerClusterOptions(),
+        icon = customIcon
       )
   })
+  
   # Tansportation Server
   session$sendCustomMessage(type = 'initialize', message = 'ready')
   
@@ -943,7 +945,7 @@ server <- function(input, output, session) {
   })
 }
 
-  
+
 
 shinyApp(ui, server, options=list(launch.browser=TRUE))
 

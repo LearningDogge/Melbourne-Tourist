@@ -906,8 +906,8 @@ server <- function(input, output, session) {
         axis.ticks = element_blank()
       ) +
       ggtitle("Counts on different themes") + theme(axis.text.x = element_text(
-        size = 6,
-        angle = 45,
+        size = 8,
+        angle = 90,
         hjust = 1
       ))
     
@@ -1294,7 +1294,7 @@ server <- function(input, output, session) {
           opacity = 0.8,
           dashArray = c(5, 10),
           group = "RoutesLines",
-          layerId = ~ SHAPE_ID
+          layerId = ~ ROUTE_KM
         )
     } else if (selected_transport_type == "Bicycle") {
       leaflet_data <- leaflet(selected_data) %>%  #
@@ -1390,7 +1390,7 @@ server <- function(input, output, session) {
     object_id_col <- switch(
       selected_transport_type,
       "Bus" = "OBJECTID_1",
-      "Tram" = "SHAPE_ID",
+      "Tram" = "ROUTE_KM",
       "Bicycle" = "Shape_Length",
       NULL
     )

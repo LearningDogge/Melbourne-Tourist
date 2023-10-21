@@ -571,7 +571,11 @@ server <- function(input, output, session) {
       theme(panel.background=element_blank(),
             panel.grid.major.y=element_line(color='#e2e2e2'),
             axis.ticks=element_blank()) +
-      ggtitle("Counts on different themes")
+      ggtitle("Counts on different themes") + theme(axis.text.x = element_text(
+        size = 6,
+        angle = 45,
+        hjust = 1
+      ))
     
     girafe(ggobj=p, height_svg=3)
   })

@@ -114,7 +114,7 @@ clouds <- current_data$clouds
 weather <- current_data$weather
 weather_main <- weather$main
 weather_description <- weather$description
-weather_icon_url <- paste0("https://openweathermap.org/img/wn/", weather$icon, ".png")
+weather_icon_url <- paste0("data/", weather$icon, "@2x.png")
 
 json_data <- reactive({
   fromJSON("data/landmarks-and-places-of-interest-including-schools-theatres-health-services-spor.json")

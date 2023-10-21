@@ -595,6 +595,17 @@ server <- function(input, output, session) {
           filter(review_scores_rating <= input$review_scores_rating[2]) %>%
           filter(review_scores_rating >= input$review_scores_rating[1])
         
+        if(nrow(hotel_data_sub) == 0){
+          leaflet() %>%
+            # Add default tile layer
+            addTiles() %>%
+            # Set initial view based on mean lat/lng
+            setView(
+              lng = mean(hotel_data$longitude),
+              lat = mean(hotel_data$latitude),
+              zoom = 17
+            )
+        }else{
         leaflet() %>%
           # Add default tile layer
           addTiles() %>%
@@ -635,6 +646,7 @@ server <- function(input, output, session) {
           groupOptions("level3", zoomLevels = 18:20) %>%
           # Set zoom levels for group level2
           groupOptions("level2", zoomLevels = 16:20)
+        }
       })
     } else {
       # Render plotly output for plot2
@@ -650,14 +662,19 @@ server <- function(input, output, session) {
           filter(review_scores_rating >= input$review_scores_rating[1]) %>%
           select(room_type, price) %>%
           # Filter out extreme values using quantile
-          filter(price <= quantile(price, 0.99)) %>%
-          ggplot() +
-          geom_boxplot(aes(x = room_type, y = price, color = room_type)) +
-          theme_minimal() +
-          theme(legend.position = "none") +
-          xlab("Room Type") +
-          ylab("Price") +
-          ggtitle("Price Distribution of Different Room Type") -> p
+          filter(price <= quantile(price, 0.99)) -> hotel_data.sub
+        if(nrow(hotel_data.sub) < 3){
+          ggplot() -> p
+        } else{
+          hotel_data.sub %>% 
+            ggplot() +
+            geom_boxplot(aes(x = room_type, y = price, color = room_type)) +
+            theme_minimal() +
+            theme(legend.position = "none") +
+            xlab("Room Type") +
+            ylab("Price") +
+            ggtitle("Price Distribution of Different Room Type") -> p
+        }
         # Convert plot to plotly format
         ggplotly(p)
       })
@@ -672,18 +689,24 @@ server <- function(input, output, session) {
           filter(number_of_reviews <= input$number_of_reviews[2]) %>%
           filter(number_of_reviews >= input$number_of_reviews[1]) %>%
           filter(review_scores_rating <= input$review_scores_rating[2]) %>%
-          filter(review_scores_rating >= input$review_scores_rating[1]) %>%
-          ggplot() +
-          geom_histogram(
-            aes(x = review_scores_rating),
-            bins = 60,
-            color = "white",
-            fill = "darkgreen"
-          ) +
-          theme_minimal() +
-          xlab("Rating") +
-          ylab("Frequency") +
-          ggtitle("Distribution of Review Scores") -> p
+          filter(review_scores_rating >= input$review_scores_rating[1]) -> hotel_data.sub
+        
+        if(nrow(hotel_data.sub) < 3){
+          ggplot() -> p
+        } else{
+          hotel_data.sub %>% 
+            ggplot() +
+            geom_histogram(
+              aes(x = review_scores_rating),
+              bins = 60,
+              color = "white",
+              fill = "darkgreen"
+            ) +
+            theme_minimal() +
+            xlab("Rating") +
+            ylab("Frequency") +
+            ggtitle("Distribution of Review Scores") -> p
+        }
         # Convert plot to plotly format
         ggplotly(p)
       })
@@ -698,31 +721,37 @@ server <- function(input, output, session) {
           filter(number_of_reviews <= input$number_of_reviews[2]) %>%
           filter(number_of_reviews >= input$number_of_reviews[1]) %>%
           filter(review_scores_rating <= input$review_scores_rating[2]) %>%
-          filter(review_scores_rating >= input$review_scores_rating[1]) %>%
-          # Group by host_name
-          group_by(host_name) %>%
-          # Calculate the total number of reviews for each host
-          summarise(number_of_reviews = sum(number_of_reviews)) %>%
-          # Select host_name and number_of_reviews
-          select(host_name, number_of_reviews) %>%
-          # Arrange hosts in descending order of number of reviews
-          arrange(desc(number_of_reviews)) %>%
-          # Select top 20 hosts with most reviews
-          slice(1:20) %>%
-          ggplot() +
-          geom_col(
-            aes(
-              x = reorder(host_name,-number_of_reviews),
-              y = number_of_reviews
-            ),
-            fill = "darkgreen",
-            width = 0.5
-          ) +
-          theme_minimal() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-          ylab("Number of Reviews") +
-          xlab("Host Name") +
-          ggtitle("Top 20 Hosts with Most Number of Reviews") -> p
+          filter(review_scores_rating >= input$review_scores_rating[1]) -> hotel_data.sub
+        
+        if(nrow(hotel_data.sub) < 3){
+          ggplot() -> p
+        } else{
+          hotel_data.sub %>% 
+            # Group by host_name
+            group_by(host_name) %>%
+            # Calculate the total number of reviews for each host
+            summarise(number_of_reviews = sum(number_of_reviews)) %>%
+            # Select host_name and number_of_reviews
+            select(host_name, number_of_reviews) %>%
+            # Arrange hosts in descending order of number of reviews
+            arrange(desc(number_of_reviews)) %>%
+            # Select top 20 hosts with most reviews
+            slice(1:20) %>%
+            ggplot() +
+            geom_col(
+              aes(
+                x = reorder(host_name,-number_of_reviews),
+                y = number_of_reviews
+              ),
+              fill = "darkgreen",
+              width = 0.5
+            ) +
+            theme_minimal() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+            ylab("Number of Reviews") +
+            xlab("Host Name") +
+            ggtitle("Top 20 Hosts with Most Number of Reviews") -> p
+        }
         # Convert plot to plotly format
         ggplotly(p)
       })
@@ -743,7 +772,11 @@ server <- function(input, output, session) {
       filter(review_scores_rating >= input$review_scores_rating[1]) %>%
       select(room_type, price) %>%
       # Filter out extreme values using quantile
-      filter(price <= quantile(price, 0.99)) %>%
+      filter(price <= quantile(price, 0.99)) -> hotel_data.sub
+    if(nrow(hotel_data.sub) < 3){
+      ggplot() -> p
+    } else{
+    hotel_data.sub %>% 
       ggplot() +
       geom_boxplot(aes(x = room_type, y = price, color = room_type)) +
       theme_minimal() +
@@ -751,6 +784,7 @@ server <- function(input, output, session) {
       xlab("Room Type") +
       ylab("Price") +
       ggtitle("Price Distribution of Different Room Type") -> p
+    }
     # Convert plot to plotly format
     ggplotly(p)
   })
@@ -765,7 +799,12 @@ server <- function(input, output, session) {
       filter(number_of_reviews <= input$number_of_reviews[2]) %>%
       filter(number_of_reviews >= input$number_of_reviews[1]) %>%
       filter(review_scores_rating <= input$review_scores_rating[2]) %>%
-      filter(review_scores_rating >= input$review_scores_rating[1]) %>%
+      filter(review_scores_rating >= input$review_scores_rating[1]) -> hotel_data.sub
+    
+    if(nrow(hotel_data.sub) < 3){
+      ggplot() -> p
+    } else{
+      hotel_data.sub %>% 
       ggplot() +
       geom_histogram(
         aes(x = review_scores_rating),
@@ -777,6 +816,7 @@ server <- function(input, output, session) {
       xlab("Rating") +
       ylab("Frequency") +
       ggtitle("Distribution of Review Scores") -> p
+    }
     # Convert plot to plotly format
     ggplotly(p)
   })
@@ -791,7 +831,12 @@ server <- function(input, output, session) {
       filter(number_of_reviews <= input$number_of_reviews[2]) %>%
       filter(number_of_reviews >= input$number_of_reviews[1]) %>%
       filter(review_scores_rating <= input$review_scores_rating[2]) %>%
-      filter(review_scores_rating >= input$review_scores_rating[1]) %>%
+      filter(review_scores_rating >= input$review_scores_rating[1]) -> hotel_data.sub
+    
+    if(nrow(hotel_data.sub) < 3){
+      ggplot() -> p
+    } else{
+    hotel_data.sub %>% 
       # Group by host_name
       group_by(host_name) %>%
       # Calculate the total number of reviews for each host
@@ -816,6 +861,7 @@ server <- function(input, output, session) {
       ylab("Number of Reviews") +
       xlab("Host Name") +
       ggtitle("Top 20 Hosts with Most Number of Reviews") -> p
+    }
     # Convert plot to plotly format
     ggplotly(p)
   })

@@ -136,6 +136,11 @@ ct_restaurants$Seating.type <- sub(".*- ", "", ct_restaurants$Seating.type)
 restaurant_group <- ct_restaurants %>%
   group_by(Industry..ANZSIC4..description) %>% 
   summarise(Num = n())
+customIcon <- makeIcon(
+  iconUrl = "data/restaurant.png",
+  iconWidth = 30,  # 图标宽度
+  iconHeight = 30  # 图标高度
+)
 
 # XXXX Data Preprocess
 
@@ -439,7 +444,9 @@ server <- function(input, output, session) {
         lat = ~Latitude,  
         popup = ~paste("<b>Restaurant Name: </b>", Trading.name, "<br>", 
                        "<b>Seating Type: </b>", Seating.type,"<br>",
-                       "<b>Number of seats: </b>", Number.of.seats)
+                       "<b>Number of seats: </b>", Number.of.seats),
+        clusterOptions = markerClusterOptions(),
+        icon = customIcon
       )
   })
 }

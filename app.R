@@ -177,11 +177,14 @@ json_data <- reactive({
 themes_tab <- tabPanel(
   title = 'Themes',
   h2('Number of different themes'),
-  splitLayout(
-    girafeOutput('plot_themes'),
-    tableauPublicViz(id = 'tableauViz',
-                     url = 'https://public.tableau.com/views/POI_16978604229170/POICategories?:language=zh-CN&publish=yes&:display_count=n&:origin=viz_share_link',
-                     height = "400px"),
+  fluidPage(
+    fluidRow(
+      column(width = 2),
+      column(width = 5, girafeOutput('plot_themes', height = "400px")),
+      column(width = 5, tableauPublicViz(id = 'tableauViz',
+                                         url = 'https://public.tableau.com/views/POI_16978604229170/POICategories?:language=zh-CN&publish=yes&:display_count=n&:origin=viz_share_link',
+                                         height = "400px"))
+    )
   )
 )
 
@@ -321,7 +324,7 @@ ui <- fluidPage(
           background-color: #0056b3;
         }
         #poi_map_controls {
-          max-height: 300px;
+          max-height: 350px;
         }
         .center-image {
           text-align: center;
@@ -332,7 +335,7 @@ ui <- fluidPage(
     )
   ),
   navbarPage(
-    "TODO: Title",
+    "Melbourne Tour",
     header = setUpTableauInShiny(),
     # Hotel Page
     tabPanel("Hotel", fluidPage(
@@ -387,7 +390,6 @@ ui <- fluidPage(
     # POI Page
     tabPanel("Places of Interest", fluidPage(mainPanel(
       div(
-        uiOutput("poi_ui"),
         tags$div(
           id = "poi_map_controls",
           class = "map-controls center-image",
@@ -404,7 +406,9 @@ ui <- fluidPage(
                    actionButton("POIButton", "Show/Hide Plot"))
         )
       )
-    ))),
+    ),
+    uiOutput("poi_ui")
+    )),
     # restaurant Page
     tabPanel(
       "Resaurants in Melbourne CBD",
@@ -555,9 +559,9 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   output$poi_ui <- renderUI({
     if (input$POIButton %% 2 == 0) {
-      div(id = "mapDiv", leafletOutput("poi_map", width = "150%", height = "85vh"))
+      div(id = "mapDiv", leafletOutput("poi_map", width = "100%", height = "85vh"))
     } else {
-      div(id = "mapDiv", title='POI Categories', themes_tab)
+      themes_tab
     }
   })
   
@@ -585,13 +589,18 @@ server <- function(input, output, session) {
     if (input$hotelButton %% 2 == 0) {
       div(id = "mapDiv", leafletOutput("map", width = "100%", height = "85vh"))
     } else {
-      fluidRow(
-        # Column 1 with plotly output element
-        column(width = 3, plotlyOutput("plot1", height = "300px")),
-        # Column 2 with plotly output element
-        column(width = 4, plotlyOutput("plot2", height = "300px")),
-        # Column 3 with plotly output element
-        column(width = 5, plotlyOutput("plot3", height = "300px"))
+      fluidPage(
+        fluidRow(
+          column(width = 3),
+          # Column 1 with plotly output element
+          column(width = 4, plotlyOutput("plot1", height = "400px")),
+          # Column 2 with plotly output element
+          column(width = 5, plotlyOutput("plot2", height = "400px"))
+        ),
+        fluidRow(
+          column(width = 3),
+          column(width = 9, plotlyOutput("plot3", height = "400px"))
+        )
       )
     }
   })
@@ -926,7 +935,7 @@ server <- function(input, output, session) {
         hjust = 1
       ))
     
-    girafe(ggobj = p, height_svg = 6)
+    girafe(ggobj = p)
   })
   
   # React to clicks on the bar chart

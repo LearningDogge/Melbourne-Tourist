@@ -7,6 +7,79 @@ library(tidyverse)
 library(readr)
 library(httr)
 library(jsonlite)
+library(shinyjs)
+
+# Call this function from navbarPage(header=...) or anywhere else suitable
+# in the Shiny UI
+setUpTableauInShiny <- function() {
+  registerInputHandler("tinsdf", function(x, session, inputname) {
+    jsonlite::fromJSON(x)
+  }, force=TRUE)
+  
+  list(
+    useShinyjs(),
+    HTML('<script type="module">
+      // Import all Tableau objects into the global namespace
+      import * as T from "https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.js";
+      Object.assign(window, T);
+      
+      // Map a few common Tableau JS events to Shiny R events
+      window.observeTableauEvents = id => {
+        const viz = document.getElementById(id);
+        viz.addEventListener(TableauEventType.MarkSelectionChanged, async e => {
+          const marks = await e.detail.getMarksAsync();
+          const columnNames = marks.data[0].columns.map(col => col.fieldName);
+          const dataTable = marks.data[0].data.map(row => row.map(val => val.value));
+          const dataForShiny = dataTable.map(row => 
+            Object.fromEntries(columnNames.map((_, i) => [columnNames[i], row[i]])));
+          Shiny.setInputValue(id + "_mark_selection_changed:tinsdf", JSON.stringify(dataForShiny));
+        });
+        viz.addEventListener(TableauEventType.FilterChanged, async e => {
+          const filter = await e.detail.getFilterAsync();
+          Shiny.setInputValue(id + "_filter_changed", {
+            fieldName: e.detail.fieldName,
+            isAllSelected: filter.isAllSelected,
+            appliedValues: filter.appliedValues.map(app => app.value)
+          });
+        });
+        viz.addEventListener(TableauEventType.ParameterChanged, async e => {
+          const param = await e.detail.getParameterAsync();
+          Shiny.setInputValue(id + "_parameter_changed", {
+            name: param.name,
+            fieldName: param.id,
+            value: param.currentValue.value
+          });
+        });
+        console.log("added events for", id)
+      };
+    </script>')
+  )
+}
+
+# For inserting a viz into the Shiny UI
+tableauPublicViz <- function(id, url, height="500px", style=NA, ...) {
+  list(
+    tag('tableau-viz', list(id=id,
+                            src=url,
+                            style=paste0('height: ', height, ';', if (is.na(style)) '' else style),
+                            ...)),
+    HTML(sprintf('<script>document.addEventListener("DOMContentLoaded", () => { observeTableauEvents("%s"); }, false);</script>', id))
+  )
+}
+
+
+births_tab <- tabPanel(
+  title='Births',
+  h2('Births in Australia'),
+  splitLayout(
+    girafeOutput('plot_births'),
+    tableauPublicViz(
+      id='tableauViz',       
+      url='https://public.tableau.com/views/SampleTableauembedforShinyintegrationlab/Hospitalstreemap',
+      height="300px"
+    ),
+  )
+)
 
 # Hotel Data Preprocess
 # Read the 'listings.csv' file and filter the data for listings in Melbourne
@@ -98,6 +171,10 @@ weather_main <- weather$main
 weather_description <- weather$description
 weather_icon_url <- paste0("https://openweathermap.org/img/wn/", weather$icon, ".png")
 
+json_data <- fromJSON("data/landmarks-and-places-of-interest-including-schools-theatres-health-services-spor.json")
+
+births_data <- read.csv('data/Births_summary_with_id.csv')
+
 # XXXX Data Preprocess
 
 # XXXX Data Preprocess
@@ -165,12 +242,13 @@ ui <- navbarPage("TODO: Title",
                          textOutput("uvi"),
                          textOutput("clouds"),
                          textOutput("weather_description"),
-                         imageOutput("weather_icon"),
-                         style = "max-width: 400px; margin: 0 auto;",
-                         class = "container"
+                         imageOutput("weather_icon")
                        ), 
                        mainPanel(
-                         leafletOutput("poi_map")
+                         leafletOutput("poi_map"),
+                         header=setUpTableauInShiny(),
+                         title='Population growth in Australia',
+                         births_tab
                        )
                       )
                      )
@@ -303,7 +381,19 @@ server <- function(input, output, session) {
   output$poi_map <- renderLeaflet({
     m <- leaflet(data()) %>%
       addTiles() %>%
-      addMarkers(lng = ~Longitude, lat = ~Latitude, popup = ~paste(Title, ": ", Description))
+      addMarkers(lng = ~Longitude, lat = ~Latitude, popup = ~paste(Title, ": ", Description)) %>%
+      setView(lng = 144.966, lat = -37.814, zoom = 15)
+    ###
+    #for (i in 1:length(json_data)) {
+    #  if (!is.null(json_data[i]$co_ordinates$lon) && !is.null(json_data[i]$co_ordinates$lat)) {
+    #    lon <- json_data[i]$co_ordinates$lon
+    #    lat <- json_data[i]$co_ordinates$lat
+    #    popup_text <- json_data[i]$feature_name
+
+    #    m <- addMarkers(m, lng = lon, lat = lat, icon = icon("triangle"), popup = popup_text)
+    #  }
+    #}
+    ###
     m
   })
   
@@ -318,8 +408,34 @@ server <- function(input, output, session) {
   output$weather_icon <- renderImage({
     list(src = weather_icon_url, contentType = "image/png")
   }, deleteFile = FALSE)
+  
+  output$plot_births <- renderGirafe({
+    p <- ggplot(births_data) +
+      aes(x=Region, y=X2020, data_id=Region) +
+      geom_bar_interactive(stat='identity', width=0.8, fill='#8f00b6') +
+      scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 10)) +
+      labs(x='State', y='Births') +
+      theme(panel.background=element_blank(),
+            panel.grid.major.y=element_line(color='#e2e2e2'),
+            axis.ticks=element_blank()) +
+      ggtitle("Births by state in 2020")
+    
+    girafe(ggobj=p, height_svg=3)
+  })
+  
+  # React to clicks on the bar chart
+  # (See Lab 7 (page 7.6.2) for an explanation of this code)
+  observeEvent(input$plot_births_selected, {
+    # Clear selection from bar chart
+    session$sendCustomMessage(type='plot_births_set', message=character(0))
+    
+    # Filter Tableau viz by the state that was clicked on the bar chart
+    state <- input$plot_births_selected
+    runjs(sprintf('let viz = document.getElementById("tableauViz");
+        let sheet = viz.workbook.activeSheet;
+        sheet.applyFilterAsync("State", ["%s"], FilterUpdateType.Replace);', state))
+  })
 }
 
 shinyApp(ui, server, options=list(launch.browser=TRUE))
-
 

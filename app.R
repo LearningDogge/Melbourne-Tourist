@@ -12,6 +12,7 @@ library(leaflet)
 library(shinyWidgets)
 library(tidyverse)
 library(readr)
+<<<<<<< Updated upstream
 library(httr)
 library(jsonlite)
 library(ggplot2)
@@ -20,6 +21,11 @@ library(dplyr)
 library(maps)
 library(scales)
 library(shinydashboard)
+=======
+library(sf)
+library(rgdal)
+library(shinyjs)
+>>>>>>> Stashed changes
 
 # Hotel Data Preprocess
 # Read the 'listings.csv' file and filter the data for listings in Melbourne
@@ -96,6 +102,7 @@ data <- reactive({
   return(data)
 })
 
+<<<<<<< Updated upstream
 api_url <- "https://api.openweathermap.org/data/3.0/onecall?lat=-37.815227&units=metric&lon=144.963611&appid=3696ab6dee1baaf964285dc399f69417"
 response <- GET(api_url)
 weather_data <- fromJSON(api_url)
@@ -141,6 +148,21 @@ customIcon <- makeIcon(
   iconWidth = 30,  # 图标宽度
   iconHeight = 30  # 图标高度
 )
+=======
+# Transport Data Preprocess
+
+# Read transportation data
+bus_data <- st_read("data/BusMetroRoutes.geojson")
+bicycle_data <- st_read("data/Melbourne_Bicycle_Routes_MGA.geojson")
+tram_data <- st_read("data/PTV_METRO_TRAM_ROUTE.geojson")
+train_data <- st_read("data/trainStations.geojson")
+
+# Calculate the max route length for BusMetroRoutes
+max_route_length_bus <- ceiling(max(bus_data$ROUTE_KM, na.rm = TRUE))
+
+# Calculate the max route length for TramRoutes
+max_route_length_tram <- ceiling(max(tram_data$ROUTE_KM, na.rm = TRUE))
+>>>>>>> Stashed changes
 
 # XXXX Data Preprocess
 
@@ -217,6 +239,7 @@ ui <- navbarPage("TODO: Title",
                       )
                      )
                     ),
+<<<<<<< Updated upstream
                  # restaurant Page
                  tabPanel(
                    "Resaurants in Melbourne CBD",
@@ -252,6 +275,137 @@ ui <- navbarPage("TODO: Title",
                      )
                    )
                  ),
+=======
+                 
+                 # Transport Page
+                 tabPanel("Transportation",
+                          fluidPage(
+                            
+                            # Custom JavaScript code
+                            useShinyjs(),
+                            extendShinyjs(text = "
+                            Shiny.addCustomMessageHandler('initialize', function(message) {
+                              $(document).on('click', '.custom-radio-button', function() {
+                                var value = $(this).attr('data-value');
+                                $('#transportType').val(value).trigger('change');
+                                $('.custom-radio-button').removeClass('active');
+                                $(this).addClass('active');
+                                Shiny.setInputValue('transportType', value, {priority: 'event'});
+                              });
+                            });
+                          ", functions = c()),
+                            
+                            # CSS style
+                            tags$head(
+                              tags$link(rel = "stylesheet", href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"),
+                              tags$style(HTML(
+                                "#map-controls {
+                                  position: absolute;
+                                  top: 50px;  
+                                  right: 20px;   
+                                  z-index: 999;
+                                  background-color: rgba(255, 255, 255, 0.8);  
+                                  padding: 15px;
+                                  border-radius: 10px;  
+                                  box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+                                  display: flex;  
+                                  flex-direction: column; 
+                                  align-items: center;  
+                                }
+                                #map-controls label,
+                                #customRadioGroup,
+                                #mapButtonGroupBusTram,
+                                #mapButtonGroupTrain {
+                                  text-align: center;
+                                  margin-top: 15px;
+                                  font-size: 1em;
+                                }
+                                #map-controls select,
+                                #map-controls input {
+                                  width: 200px; 
+                                }
+                                .custom-radio-button {
+                                  display: inline-block;
+                                  padding: 8px 12px;
+                                  margin: 2px;
+                                  border: 1px solid #ccc;
+                                  cursor: pointer;
+                                  border-radius: 15px;
+                                  transition: background-color 0.3s, border 0.3s;
+                                }
+                                .custom-radio-button.active {
+                                  background-color: #007bff;
+                                  color: white;
+                                  border: 1px solid #007bff;
+                                }
+                                #transportType {
+                                  display: none;
+                                }
+                                #mapButtonGroupBusTram button,
+                                #mapButtonGroupTrain button {
+                                  background-color: #0074D9;
+                                  color: white;
+                                  border: none;
+                                  padding: 10px 20px;
+                                  border-radius: 8px;
+                                  cursor: pointer;
+                                  transition: background-color 0.3s;
+                                }
+                                #mapButtonGroupBusTram button:hover,
+                                #mapButtonGroupTrain button:hover {
+                                  background-color: #0056b3;
+                                }
+                              "))
+                            ),
+                            
+                            # Main title panel
+                            titlePanel("Melbourne Guide"),
+                            
+                            # Main panel
+                            mainPanel(
+                              tabsetPanel(
+                                tabPanel("Transportation", 
+                                         div(
+                                           leafletOutput("Transportation", width = "100%", height = "85vh"),
+                                           tags$div(id = "map-controls",
+                                                    radioButtons("transportType", "Select Transport Type:", 
+                                                                 choices = c("Bus", "Tram", "Train", "Bicycle")),
+                                                    tags$div(
+                                                      id = 'customRadioGroup',
+                                                      tags$div(class = "custom-radio-button active", tags$i(class="fas fa-bus"), " Bus", `data-value` = "Bus"),
+                                                      tags$div(class = "custom-radio-button", tags$i(class="fas fa-tram"), " Tram", `data-value` = "Tram"),
+                                                      tags$div(class = "custom-radio-button", tags$i(class="fas fa-train"), " Train", `data-value` = "Train"),
+                                                      tags$div(class = "custom-radio-button", tags$i(class="fas fa-bicycle"), " Bicycle", `data-value` = "Bicycle")
+                                                    ),
+                                                    conditionalPanel(
+                                                      condition = "input.transportType === 'Bus' || input.transportType === 'Tram'",
+                                                      selectizeInput("routeName", "Search Route by Name:", choices = NULL, multiple = FALSE, options = list(placeholder = 'Type route name...'), selected = ""),
+                                                      sliderInput("routeLength", "Filter by Route Length (KM):", 0, max = max_route_length_bus, value = c(0, max_route_length_bus), step = 1),
+                                                      selectInput("startStation", "Choose Start Station:", "", selected = ""),
+                                                      selectInput("endStation", "Choose End Station:", "", selected = ""),
+                                                      tags$div(id = 'mapButtonGroupBusTram',
+                                                               actionButton("goToGoogleMapBusTram", "Go to Google Map")
+                                                      )
+                                                    ),
+                                                    conditionalPanel(
+                                                      condition = "input.transportType === 'Train'",
+                                                      selectizeInput("stationName", "Search Station by Name:", choices = NULL, multiple = FALSE, options = list(placeholder = 'Type station name...'), selected = ""),
+                                                      tags$div(id = 'mapButtonGroupTrain',
+                                                               actionButton("goToGoogleMapTrain", "Go to Google Map")
+                                                      )
+                                                    ),
+                                                    conditionalPanel(
+                                                      condition = "input.transportType === 'Bicycle'",
+                                                      selectInput("bicycleType", "Select Bicycle Type:", "", selected = "")
+                                                    )
+                                           )
+                                         )
+                                )
+                              )
+                            )
+                          )
+                 )
+>>>>>>> Stashed changes
 )
 
 # Server function definition
@@ -384,6 +538,7 @@ server <- function(input, output, session) {
     m
   })
   
+<<<<<<< Updated upstream
   output$weather_main <- renderText(paste("Weather: ", weather_main))
   output$temperature <- renderText(paste("Temperature: ", temperature, "°C"))
   output$pressure <- renderText(paste("Pressure: ", pressure, "hPa"))
@@ -449,7 +604,359 @@ server <- function(input, output, session) {
         icon = customIcon
       )
   })
+=======
+  # Tansportation Server
+  session$sendCustomMessage(type = 'initialize', message = 'ready')
+  
+  start_stations <- NULL
+  route_names <- NULL
+  all_start_stations <- NULL
+  end_stations <- NULL
+  all_end_stations <- NULL
+  
+  # Initialize start/end stations and route length based on the initial data
+  observe({
+    selected_transport_type <- input$transportType
+    if (selected_transport_type == "Bus") {
+      start_stations <- unique(bus_data$FIRST_STOP_NAME)
+      end_stations <- unique(bus_data$LAST_STOP_NAME)
+      max_val <- max_route_length_bus
+      updateSliderInput(session, "routeLength", max = max_route_length_bus, value = c(0, max))
+    } else if (selected_transport_type == "Tram") {
+      start_stations <- unique(tram_data$FIRST_STOP_NAME)  
+      end_stations <- unique(tram_data$LAST_STOP_NAME)
+      max_val <- max_route_length_tram
+      updateSliderInput(session, "routeLength", max = max_route_length_tram, value = c(0, max))
+    }
+    updateSelectInput(session, "startStation", choices = c("", start_stations))
+    updateSelectInput(session, "endStation", choices = c("", end_stations))
+  })
+  
+  # Initialize bicycle types
+  observe({
+    selected_transport_type <- input$transportType
+    if (selected_transport_type == "Bicycle") {
+      bicycle_types <- unique(bicycle_data$type)
+      updateSelectInput(session, "bicycleType", choices = c("", bicycle_types))
+    }
+  })
+  
+  # Populate route name choices
+  observe({
+    selected_transport_type <- input$transportType
+    if (selected_transport_type == "Bus") {
+      route_names <- unique(bus_data$ROUTE_LONG_NAME)
+    } else if (selected_transport_type == "Tram") {
+      route_names <- unique(tram_data$ROUTE_LONG_NAME)
+    }
+    updateSelectizeInput(session, "routeName", choices = route_names, selected = "")
+  })
+  
+  # Update based on selected routeName, startStation, and endStation
+  observe({
+    selected_transport_type <- input$transportType
+    if (selected_transport_type == "Bus") {
+      data_source <- bus_data
+    } else if (selected_transport_type == "Tram") {
+      data_source <- tram_data
+    }
+    
+    # Capture the current selections
+    current_start_station <- input$startStation
+    current_end_station <- input$endStation
+    
+    
+    if (input$startStation != "" && input$endStation == "") {
+      data_for_start_station <- data_source[data_source$FIRST_STOP_NAME == input$startStation,]
+      available_end_stations <- unique(data_for_start_station$LAST_STOP_NAME)
+      updateSelectInput(session, "endStation", choices = c("", available_end_stations))
+    }
+    
+    if (input$endStation != "" && input$startStation == "") {
+      data_for_end_station <- data_source[data_source$LAST_STOP_NAME == input$endStation,]
+      available_start_stations <- unique(data_for_end_station$FIRST_STOP_NAME)
+      updateSelectInput(session, "startStation", choices = c("", available_start_stations))
+    }
+    
+    if (input$startStation == "" && input$endStation == "") {
+      if (selected_transport_type == "Bus") {
+        all_start_stations <- unique(bus_data$FIRST_STOP_NAME)
+        all_end_stations <- unique(bus_data$LAST_STOP_NAME)
+      } else if (selected_transport_type == "Tram") {
+        all_start_stations <- unique(tram_data$FIRST_STOP_NAME)
+        all_end_stations <- unique(tram_data$LAST_STOP_NAME)
+      }
+      updateSelectInput(session, "startStation", choices = c("", all_start_stations))
+      updateSelectInput(session, "endStation", choices = c("", all_end_stations))
+    }
+  })
+  
+  # Update the choices for the selectize input based on the available train stations
+  observe({
+    if (input$transportType == "Train") {
+      train_stations <- unique(train_data$STATIONNAM)
+      updateSelectizeInput(session, "stationName", choices = train_stations, selected = "")
+    }
+  })
+  
+  # Filter train stations based on the input text
+  filtered_train_stations <- reactive({
+    if (input$transportType == "Train") {
+      data <- train_data
+      if (input$stationName != "") {
+        data <- data[grep(input$stationName, data$STATIONNAM),]
+      }
+      return(data)
+    } else {
+      return(NULL)
+    }
+  })
+  
+  # Filter data based on route name and length
+  filtered_data <- reactive({
+    selected_transport_type <- input$transportType
+    if (selected_transport_type == "Bus") {
+      data <- bus_data
+    } else if (selected_transport_type == "Tram") {
+      data <- tram_data
+    }
+    
+    if (input$startStation != "") { data <- data[data$FIRST_STOP_NAME == input$startStation,] }
+    if (input$endStation != "") { data <- data[data$LAST_STOP_NAME == input$endStation,] }
+    if (input$routeName != "") { data <- data[grep(input$routeName, data$ROUTE_LONG_NAME),] }
+    if (input$routeLength[1] > 0 || input$routeLength[2] < 100) { data <- data[data$ROUTE_KM >= input$routeLength[1] & data$ROUTE_KM <= input$routeLength[2],] }
+    
+    return(data)
+  })
+  
+  # Filter bicycle data based on the input type
+  filtered_bicycle_data <- reactive({
+    if (input$transportType == "Bicycle") {
+      data <- bicycle_data
+      if (input$bicycleType != "") {
+        data <- data[data$type == input$bicycleType,]
+      }
+      return(data)
+    } else {
+      return(NULL)
+    }
+  })
+  
+  
+  # Render the Leaflet map
+  output$Transportation <- renderLeaflet({
+    
+    selected_transport_type <- input$transportType
+    selected_data <- switch(selected_transport_type,
+                            "Bus" = filtered_data(),
+                            "Bicycle" = filtered_bicycle_data(),
+                            "Train" = filtered_train_stations(),
+                            "Tram" = filtered_data(),
+                            NULL)
+    
+    
+    leaflet_data <- leaflet(selected_data) %>% addProviderTiles(providers$OpenStreetMap)
+    
+    
+    geom_type <- st_geometry_type(selected_data)[1]
+    if (selected_transport_type == "Train") {
+      leaflet_data <- leaflet_data %>% 
+        addCircleMarkers(clusterOptions = markerClusterOptions(maxClusterRadius = 80, disableClusteringAtZoom = 12), 
+                         popup = ~paste0("Station Name: ", STATIONNAM,
+                                         "<br>Station Type: ", STATIONTYP,
+                                         "<br>Stop Mode: ", STOPMODENA,
+                                         "<br>Zones: ", ZONES),
+                         color = ~ifelse(STOPMODENA == "Train", rgb(23, 107, 135, maxColorValue = 255), rgb(255, 128, 128, maxColorValue = 255)),
+                         fillColor = ~ifelse(STOPMODENA == "Train", rgb(23, 107, 135, maxColorValue = 255), rgb(255, 128, 128, maxColorValue = 255)),
+                         fillOpacity = 0.8,
+                         weight = 3,
+                         radius = 8,
+                         layerId = ~METLINKSTO) %>%
+        addLegend(
+          position = "bottomleft",
+          title = "Stop Mode",
+          colors = c(rgb(23, 107, 135, maxColorValue = 255), rgb(255, 128, 128, maxColorValue = 255)), 
+          labels = c("Train", "V/Line Train"), 
+          layerId = "legend_station",
+          opacity = 1)
+    } else if (selected_transport_type == "Bus") {
+      leaflet_data <- leaflet(filtered_data()) %>%  
+        addProviderTiles(providers$OpenStreetMap) %>%
+        addPolylines(popup = ~paste0("Route Name: ", ROUTE_LONG_NAME,
+                                     "<br>Start Station: ", FIRST_STOP_NAME,
+                                     "<br>End Station: ", LAST_STOP_NAME,
+                                     "<br>Number of Stops: ", NUM_OF_STOPS,
+                                     "<br>Route Length (KM): ", ROUTE_KM),
+                     stroke = TRUE, 
+                     color = rgb(23, 107, 135, maxColorValue = 255),
+                     weight = 3,
+                     opacity = 0.6,
+                     dashArray = c(5,10),
+                     group = "RoutesLines",
+                     layerId = ~OBJECTID_1)
+    } else if (selected_transport_type == "Tram") {
+      leaflet_data <- leaflet(filtered_data()) %>%  
+        addProviderTiles(providers$OpenStreetMap) %>%
+        addPolylines(popup = ~paste0("Route Name: ", ROUTE_LONG_NAME, 
+                                     "<br>Start Station: ", FIRST_STOP_NAME, 
+                                     "<br>End Station: ", LAST_STOP_NAME, 
+                                     "<br>Number of Stops: ", NUM_OF_STOPS, 
+                                     "<br>Route Length (KM): ", ROUTE_KM),  
+                     stroke = TRUE, 
+                     color = rgb(23, 107, 135, maxColorValue = 255),
+                     weight = 3,
+                     opacity = 0.8,
+                     dashArray = c(5,10),
+                     group = "RoutesLines",
+                     layerId = ~ROUTE_ID)  
+    } else if (selected_transport_type == "Bicycle") {
+      leaflet_data <- leaflet(selected_data) %>%  # 
+        addProviderTiles(providers$OpenStreetMap) %>%
+        addPolylines(popup = ~paste0("Route Name: ", name,  
+                                     "<br>Type: ", type,  
+                                     "<br>Direction: ", direction,  
+                                     "<br>Status: ", status,
+                                     "<br>Notes: ", notes), 
+                     stroke = TRUE, 
+                     color = ~ifelse(direction == "Both Directions", rgb(23, 107, 135, maxColorValue = 255), rgb(255, 128, 128, maxColorValue = 255)),
+                     weight = 3,
+                     opacity = 0.8,
+                     dashArray = c(5,10),
+                     group = "RoutesLines",
+                     layerId = ~Shape_Length) %>%
+        addLegend(
+          position = "bottomleft",
+          title = "Direction",
+          colors = c(rgb(23, 107, 135, maxColorValue = 255), rgb(255, 128, 128, maxColorValue = 255)), 
+          labels = c("Both Direction", "One Way"), 
+          layerId = "legend_bicycle",
+          opacity = 1
+        )
+    }
+    
+    return(leaflet_data)
+  })
+  
+  # Go to Google Map
+  observeEvent(input$goToGoogleMapBusTram, {
+    selected_transport_type <- input$transportType
+    google_map_url <- NULL  # Initialize to NULL
+    if (selected_transport_type %in% c("Bus", "Tram")) {
+      start_station <- input$startStation
+      end_station <- input$endStation
+      google_map_url <- paste0("https://www.google.com/maps/dir/", 
+                               URLencode(start_station), "/", 
+                               URLencode(end_station))
+    } 
+    if (!is.null(google_map_url)) {
+      browseURL(google_map_url)
+    }
+  })
+  observeEvent(input$goToGoogleMapTrain, {
+    selected_transport_type <- input$transportType
+    google_map_url <- NULL  # Initialize to NULL
+    
+    if (input$transportType == "Train") {
+      station_name <- input$stationName
+      google_map_url <- paste0("https://www.google.com/maps/dir/", 
+                               URLencode(paste0(station_name, ", Australia")))
+    }
+    
+    if (!is.null(google_map_url)) {
+      browseURL(google_map_url)
+    }
+  })
+  
+  # Highlight clicked route
+  clicked_line <- reactiveVal(NULL)
+  clicked_station <- reactiveVal(NULL)
+  observeEvent(input$Transportation_shape_click, {
+    click_data <- input$Transportation_shape_click
+    selected_transport_type <- input$transportType
+    
+    selected_data <- switch(selected_transport_type,
+                            "Bus" = bus_data,
+                            "Tram" = tram_data,
+                            "Bicycle" = bicycle_data,
+                            NULL)
+    
+    object_id_col <- switch(selected_transport_type,
+                            "Bus" = "OBJECTID_1",
+                            "Tram" = "ROUTE_ID",
+                            "Bicycle" = "Shape_Length", 
+                            NULL)
+    
+    popup_content <- switch(selected_transport_type,
+                            "Bus" = ~paste0("Route Name: ", ROUTE_LONG_NAME,
+                                            "<br>Start Station: ", FIRST_STOP_NAME,
+                                            "<br>End Station: ", LAST_STOP_NAME,
+                                            "<br>Number of Stops: ", NUM_OF_STOPS,
+                                            "<br>Route Length (KM): ", ROUTE_KM),
+                            "Tram" = ~paste0("Route Name: ", ROUTE_LONG_NAME,
+                                             "<br>Start Station: ", FIRST_STOP_NAME,
+                                             "<br>End Station: ", LAST_STOP_NAME,
+                                             "<br>Number of Stops: ", NUM_OF_STOPS,
+                                             "<br>Route Length (KM): ", ROUTE_KM),
+                            "Bicycle" = ~paste0("Route Name: ", name,
+                                                "<br>Type: ", type,
+                                                "<br>Direction: ", direction,
+                                                "<br>Status: ", status,
+                                                "<br>Notes: ", notes),
+                            NULL)
+    
+    if(click_data$group == "RoutesLines") {
+      # Get the ID of the clicked route
+      new_clicked_id <- click_data$id
+      
+      # Get the corresponding direction for the clicked bicycle line
+      if (selected_transport_type == "Bicycle") {
+        clicked_direction <- selected_data[selected_data[[object_id_col]] == new_clicked_id,]$direction[1]
+      }
+      
+      
+      # Check if this route has been clicked before
+      if(is.null(clicked_line()) || new_clicked_id != clicked_line()) {
+        # Update the color of the clicked route to red
+        leafletProxy("Transportation") %>%
+          addPolylines(data = selected_data[selected_data[[object_id_col]] == new_clicked_id,],
+                       popup = popup_content,
+                       color = rgb(249, 148, 23, maxColorValue = 255),
+                       weight = 3,
+                       opacity = 1,
+                       dashArray = c(5,10),
+                       group = "RoutesLines",
+                       layerId = new_clicked_id)
+        
+        # Update the ID of the clicked route
+        clicked_line(new_clicked_id)
+        
+      } else {
+        # Reset the color of the previously clicked route to the original color
+        original_color <- ifelse(selected_transport_type == "Bicycle", 
+                                 ifelse(clicked_direction == "Both Directions", rgb(23, 107, 135, maxColorValue = 255), rgb(255, 128, 128, maxColorValue = 255)), 
+                                 rgb(23, 107, 135, maxColorValue = 255))
+        # Reset the color of the previously clicked route to blue
+        leafletProxy("Transportation") %>%
+          addPolylines(data = selected_data[selected_data[[object_id_col]] == new_clicked_id,],
+                       popup = popup_content,
+                       color = original_color,
+                       group = "RoutesLines",
+                       weight = 3,
+                       opacity = 1,
+                       dashArray = c(5,10),
+                       layerId = new_clicked_id)
+        
+        # Reset the ID of the clicked route
+        clicked_line(NULL)
+      }
+    }
+    
+  })
+  
+>>>>>>> Stashed changes
 }
+
+  
 
 shinyApp(ui, server, options=list(launch.browser=TRUE))
 

@@ -11,5 +11,5 @@ This R Shiny application serves as a comprehensive guide for tourists coming to 
 ### Using RStudio
 
 1. Open RStudio and set the working directory to the folder where the Shiny application code is saved.
-2. Open the main R script file in RStudio.
+2. Open the "app.R" R script file in RStudio.
 3. Click on the "Run App" button at the top-right corner of the script editor, your R Shiny app should be launched in a new browser.

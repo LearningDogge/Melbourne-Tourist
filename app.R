@@ -142,8 +142,20 @@ restaurant_group <- ct_restaurants %>%
 
 customIcon <- makeIcon(
   iconUrl = "data/restaurant.png",
-  iconWidth = 30,  # 图标宽度
-  iconHeight = 30  # 图标高度
+  iconWidth = 30, 
+  iconHeight = 30 
+)
+
+customIcon1 <- makeIcon(
+  iconUrl = "data/hotel.png",
+  iconWidth = 30,  
+  iconHeight = 30 
+)
+
+customIcon2 <- makeIcon(
+  iconUrl = "data/POI.png",
+  iconWidth = 30,  
+  iconHeight = 30 
 )
 
 # Transport Data Preprocess
@@ -159,81 +171,143 @@ max_route_length_bus <- ceiling(max(bus_data$ROUTE_KM, na.rm = TRUE))
 # Calculate the max route length for TramRoutes
 max_route_length_tram <- ceiling(max(tram_data$ROUTE_KM, na.rm = TRUE))
 
-# XXXX Data Preprocess
-
 # TODO: Title
-ui <- navbarPage("TODO: Title",
-                 # Hotel Page
-                 tabPanel("Hotel", fluidPage(
-                   fluidRow(
-                     sidebarLayout(
-                       sidebarPanel(
-                         # Select Room Type input element
-                         selectInput("room_type", 
-                                     label = "Select Room Type", 
-                                     choices = unique(hotel_data$room_type), 
-                                     selected = unique(hotel_data$room_type)[1:3], 
-                                     multiple = T), 
-                         # Select Range of Price slider input element
-                         sliderInput("price", 
-                                     label = "Select Range of Price", 
-                                     min = hotel_data$price %>% min(), 
-                                     max = hotel_data$price %>% quantile(.99), 
-                                     value = c(hotel_data$price %>% quantile(.20), 
-                                               hotel_data$price %>% quantile(.95))), 
-                         # Select Range of Number of Review slider input element
-                         sliderInput("number_of_reviews", 
-                                     label = "Select Range of Number of Review", 
-                                     min = hotel_data$number_of_reviews %>% min(), 
-                                     max = hotel_data$number_of_reviews %>% max(), 
-                                     value = c(200, hotel_data$number_of_reviews %>% max())),
-                         # Select Range of Review Score slider input element
-                         sliderInput("review_scores_rating", 
-                                     label = "Select Range of Review Score", 
-                                     min = hotel_data$review_scores_rating %>% min(), 
-                                     max = hotel_data$review_scores_rating %>% max(), 
-                                     value = c(3, hotel_data$review_scores_rating %>% max())), 
-                         width = 3
-                       ), 
-                       mainPanel(
-                         # Leaflet map output element
-                         leafletOutput("map", height = "500px"), 
-                         width = 9
-                       )
+ui <- fluidPage(
+  # Common CSS Style
+  tags$head(
+    tags$link(rel = "stylesheet", href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"),
+    tags$style(HTML(
+      ".map-controls {
+         position: absolute;
+         top: 50px;  
+         right: 20px;   
+         z-index: 999;
+         background-color: rgba(255, 255, 255, 0.8);  
+         padding: 15px;
+         border-radius: 10px;  
+         box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+         display: flex;  
+         flex-direction: column; 
+         align-items: center;
+       }
+       #map-controls label,
+        #customRadioGroup,
+        #mapButtonGroupBusTram,
+        #mapButtonGroupTrain {
+          text-align: center;
+          margin-top: 15px;
+          font-size: 1em;
+        }
+        #map-controls select,
+        #map-controls input {
+          width: 200px; 
+        }
+        .custom-radio-button {
+          display: inline-block;
+          padding: 8px 12px;
+          margin: 2px;
+          border: 1px solid #ccc;
+          cursor: pointer;
+          border-radius: 15px;
+          transition: background-color 0.3s, border 0.3s;
+        }
+        .custom-radio-button.active {
+          background-color: #007bff;
+          color: white;
+          border: 1px solid #007bff;
+        }
+        #transportType {
+          display: none;
+        }
+        #mapButtonGroupBusTram button,
+        #mapButtonGroupTrain button {
+          background-color: #0074D9;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background-color 0.3s;
+        }
+        #mapButtonGroupBusTram button:hover,
+        #mapButtonGroupTrain button:hover {
+          background-color: #0056b3;
+        }
+        #poi_map_controls {
+          max-height: 280px;
+          overflow: auto;
+        }
+     "))
+  ),
+  navbarPage("TODO: Title",
+             # Hotel Page
+             tabPanel("Hotel", fluidPage(
+               fluidRow(
+                 mainPanel(
+                   div(
+                     leafletOutput("map", width = "100%", height = "85vh"),
+                     tags$div(id = "hotel_map_controls", class = "map-controls", 
+                              # Select Room Type input element
+                              selectInput("room_type", 
+                                          label = "Select Room Type", 
+                                          choices = unique(hotel_data$room_type), 
+                                          selected = unique(hotel_data$room_type)[1:3], 
+                                          multiple = T),
+                              # Select Range of Price slider input element
+                              sliderInput("price", 
+                                          label = "Select Range of Price", 
+                                          min = hotel_data$price %>% min(), 
+                                          max = hotel_data$price %>% quantile(.99), 
+                                          value = c(hotel_data$price %>% quantile(.20), 
+                                                    hotel_data$price %>% quantile(.95))),
+                              # Select Range of Number of Review slider input element
+                              sliderInput("number_of_reviews", 
+                                          label = "Select Range of Number of Review", 
+                                          min = hotel_data$number_of_reviews %>% min(), 
+                                          max = hotel_data$number_of_reviews %>% max(), 
+                                          value = c(200, hotel_data$number_of_reviews %>% max())),
+                              # Select Range of Review Score slider input element
+                              sliderInput("review_scores_rating", 
+                                          label = "Select Range of Review Score", 
+                                          min = hotel_data$review_scores_rating %>% min(), 
+                                          max = hotel_data$review_scores_rating %>% max(), 
+                                          value = c(3, hotel_data$review_scores_rating %>% max())), 
+                              width = 3
                      )
-                   ), 
-                   fluidRow(
-                     # Column 1 with plotly output element
-                     column(width = 3, plotlyOutput("plot1", height = "300px")), 
-                     # Column 2 with plotly output element
-                     column(width = 4, plotlyOutput("plot2", height = "300px")), 
-                     # Column 3 with plotly output element
-                     column(width = 5, plotlyOutput("plot3", height = "300px"))
-                   ))),
-                 
-                 # POI Page
-                 tabPanel("Places of Interest", fluidPage(
-                   sidebarLayout(
-                     sidebarPanel(
-                       h2("Current Weather"),
-                       textOutput("weather_main"),
-                       textOutput("temperature"),
-                       textOutput("feelslike"),
-                       textOutput("humidity"),
-                       textOutput("pressure"),
-                       textOutput("uvi"),
-                       textOutput("clouds"),
-                       textOutput("weather_description"),
-                       imageOutput("weather_icon"),
-                       style = "max-width: 400px; margin: 0 auto;",
-                       class = "container"
-                     ), 
-                     mainPanel(
-                       leafletOutput("poi_map")
-                     )
+                   ),
+                   width = 9
+                 )
+               ), 
+               fluidRow(
+                 # Column 1 with plotly output element
+                 column(width = 3, plotlyOutput("plot1", height = "300px")), 
+                 # Column 2 with plotly output element
+                 column(width = 4, plotlyOutput("plot2", height = "300px")), 
+                 # Column 3 with plotly output element
+                 column(width = 5, plotlyOutput("plot3", height = "300px"))
+               )
+             )),
+             
+             # POI Page
+             tabPanel("Places of Interest", fluidPage(
+               mainPanel(
+                 div(
+                   leafletOutput("poi_map", width = "100%", height = "85vh"),
+                   tags$div(id = "poi_map_controls", class = "map-controls",
+                            h2("Current Weather"),
+                            textOutput("weather_main"),
+                            textOutput("temperature"),
+                            textOutput("feelslike"),
+                            textOutput("humidity"),
+                            textOutput("pressure"),
+                            textOutput("uvi"),
+                            textOutput("clouds"),
+                            textOutput("weather_description"),
+                            imageOutput("weather_icon")
                    )
                  )
-                 ),
+               )
+             )),
                  # restaurant Page
                  tabPanel(
                    "Resaurants in Melbourne CBD",
@@ -245,35 +319,24 @@ ui <- navbarPage("TODO: Title",
                      valueBoxOutput("bar"),
                      valueBoxOutput("takeaway"),
                    ),
-                   sidebarLayout(
-                     sidebarPanel(
-                       span(h6("You can choose different seat type.")
-                            ,style="color:black"),
-                       radioButtons("seat", "Seat Type: ", c("Indoor","Outdoor"), 
-                                    selected = "Indoor"),
-                       span(h6("You can check different type of restaurants' information.")
-                            ,style="color:black"),
-                       selectInput(
-                         "type", 
-                         label = "Choose a type of restaurant to display",
-                         choices = restaurant_group$Industry..ANZSIC4..description,
-                         selected = "Cafes and Restaurants"
-                       ),
-                       sliderInput("number", "Choose number of seat range: ", 
-                                   min = min(ct_restaurants$Number.of.seats), 
-                                   max = max(ct_restaurants$Number.of.seats),
-                                   value = c(5, 15)),
-                     ),
-                     mainPanel(
-                       leafletOutput("map1")
+                   mainPanel(div(
+                     leafletOutput("map1", width = "100%", height = "85vh"), 
+                     tags$div(id = "restaurant_map_controls", class = "map-controls", 
+                              radioButtons("seat", "Seat Type: ", c("Indoor","Outdoor"), selected = "Indoor"),
+                              selectInput("type", label = "Choose a type of restaurant to display",
+                                          choices = restaurant_group$Industry..ANZSIC4..description,
+                                          selected = "Cafes and Restaurants"),
+                              sliderInput("number", "Choose number of seat range: ",
+                                          min = min(ct_restaurants$Number.of.seats), 
+                                          max = max(ct_restaurants$Number.of.seats),
+                                          value = c(5, 15))
                      )
-                   )
+                   ))
                  ),
                  
                  # Transport Page
                  tabPanel("Transportation",
                           fluidPage(
-                            
                             # Custom JavaScript code
                             useShinyjs(),
                             extendShinyjs(text = "
@@ -287,117 +350,46 @@ ui <- navbarPage("TODO: Title",
                               });
                             });
                           ", functions = c()),
-                            
-                            # CSS style
-                            tags$head(
-                              tags$link(rel = "stylesheet", href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"),
-                              tags$style(HTML(
-                                "#map-controls {
-                                  position: absolute;
-                                  top: 50px;  
-                                  right: 20px;   
-                                  z-index: 999;
-                                  background-color: rgba(255, 255, 255, 0.8);  
-                                  padding: 15px;
-                                  border-radius: 10px;  
-                                  box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-                                  display: flex;  
-                                  flex-direction: column; 
-                                  align-items: center;  
-                                }
-                                #map-controls label,
-                                #customRadioGroup,
-                                #mapButtonGroupBusTram,
-                                #mapButtonGroupTrain {
-                                  text-align: center;
-                                  margin-top: 15px;
-                                  font-size: 1em;
-                                }
-                                #map-controls select,
-                                #map-controls input {
-                                  width: 200px; 
-                                }
-                                .custom-radio-button {
-                                  display: inline-block;
-                                  padding: 8px 12px;
-                                  margin: 2px;
-                                  border: 1px solid #ccc;
-                                  cursor: pointer;
-                                  border-radius: 15px;
-                                  transition: background-color 0.3s, border 0.3s;
-                                }
-                                .custom-radio-button.active {
-                                  background-color: #007bff;
-                                  color: white;
-                                  border: 1px solid #007bff;
-                                }
-                                #transportType {
-                                  display: none;
-                                }
-                                #mapButtonGroupBusTram button,
-                                #mapButtonGroupTrain button {
-                                  background-color: #0074D9;
-                                  color: white;
-                                  border: none;
-                                  padding: 10px 20px;
-                                  border-radius: 8px;
-                                  cursor: pointer;
-                                  transition: background-color 0.3s;
-                                }
-                                #mapButtonGroupBusTram button:hover,
-                                #mapButtonGroupTrain button:hover {
-                                  background-color: #0056b3;
-                                }
-                              "))
-                            ),
-                            
-                            # Main title panel
-                            titlePanel("Melbourne Guide"),
-                            
                             # Main panel
-                            mainPanel(
-                              tabsetPanel(
-                                tabPanel("Transportation", 
-                                         div(
-                                           leafletOutput("Transportation", width = "100%", height = "85vh"),
-                                           tags$div(id = "map-controls",
-                                                    radioButtons("transportType", "Select Transport Type:", 
-                                                                 choices = c("Bus", "Tram", "Train", "Bicycle")),
-                                                    tags$div(
-                                                      id = 'customRadioGroup',
-                                                      tags$div(class = "custom-radio-button active", tags$i(class="fas fa-bus"), " Bus", `data-value` = "Bus"),
-                                                      tags$div(class = "custom-radio-button", tags$i(class="fas fa-tram"), " Tram", `data-value` = "Tram"),
-                                                      tags$div(class = "custom-radio-button", tags$i(class="fas fa-train"), " Train", `data-value` = "Train"),
-                                                      tags$div(class = "custom-radio-button", tags$i(class="fas fa-bicycle"), " Bicycle", `data-value` = "Bicycle")
-                                                    ),
-                                                    conditionalPanel(
-                                                      condition = "input.transportType === 'Bus' || input.transportType === 'Tram'",
-                                                      selectizeInput("routeName", "Search Route by Name:", choices = NULL, multiple = FALSE, options = list(placeholder = 'Type route name...'), selected = ""),
-                                                      sliderInput("routeLength", "Filter by Route Length (KM):", 0, max = max_route_length_bus, value = c(0, max_route_length_bus), step = 1),
-                                                      selectInput("startStation", "Choose Start Station:", "", selected = ""),
-                                                      selectInput("endStation", "Choose End Station:", "", selected = ""),
-                                                      tags$div(id = 'mapButtonGroupBusTram',
-                                                               actionButton("goToGoogleMapBusTram", "Go to Google Map")
-                                                      )
-                                                    ),
-                                                    conditionalPanel(
-                                                      condition = "input.transportType === 'Train'",
-                                                      selectizeInput("stationName", "Search Station by Name:", choices = NULL, multiple = FALSE, options = list(placeholder = 'Type station name...'), selected = ""),
-                                                      tags$div(id = 'mapButtonGroupTrain',
-                                                               actionButton("goToGoogleMapTrain", "Go to Google Map")
-                                                      )
-                                                    ),
-                                                    conditionalPanel(
-                                                      condition = "input.transportType === 'Bicycle'",
-                                                      selectInput("bicycleType", "Select Bicycle Type:", "", selected = "")
-                                                    )
-                                           )
-                                         )
-                                )
-                              )
+                            mainPanel(div(
+                                       leafletOutput("Transportation", width = "100%", height = "85vh"),
+                                       tags$div(id = "map-controls", class = "map-controls",
+                                                radioButtons("transportType", "Select Transport Type:", 
+                                                             choices = c("Bus", "Tram", "Train", "Bicycle")),
+                                                tags$div(
+                                                  id = 'customRadioGroup',
+                                                  tags$div(class = "custom-radio-button active", tags$i(class="fas fa-bus"), " Bus", `data-value` = "Bus"),
+                                                  tags$div(class = "custom-radio-button", tags$i(class="fas fa-tram"), " Tram", `data-value` = "Tram"),
+                                                  tags$div(class = "custom-radio-button", tags$i(class="fas fa-train"), " Train", `data-value` = "Train"),
+                                                  tags$div(class = "custom-radio-button", tags$i(class="fas fa-bicycle"), " Bicycle", `data-value` = "Bicycle")
+                                                ),
+                                                conditionalPanel(
+                                                  condition = "input.transportType === 'Bus' || input.transportType === 'Tram'",
+                                                  selectizeInput("routeName", "Search Route by Name:", choices = NULL, multiple = FALSE, options = list(placeholder = 'Type route name...'), selected = ""),
+                                                  sliderInput("routeLength", "Filter by Route Length (KM):", 0, max = max_route_length_bus, value = c(0, max_route_length_bus), step = 1),
+                                                  selectInput("startStation", "Choose Start Station:", "", selected = ""),
+                                                  selectInput("endStation", "Choose End Station:", "", selected = ""),
+                                                  tags$div(id = 'mapButtonGroupBusTram',
+                                                           actionButton("goToGoogleMapBusTram", "Go to Google Map")
+                                                  )
+                                                ),
+                                                conditionalPanel(
+                                                  condition = "input.transportType === 'Train'",
+                                                  selectizeInput("stationName", "Search Station by Name:", choices = NULL, multiple = FALSE, options = list(placeholder = 'Type station name...'), selected = ""),
+                                                  tags$div(id = 'mapButtonGroupTrain',
+                                                           actionButton("goToGoogleMapTrain", "Go to Google Map")
+                                                  )
+                                                ),
+                                                conditionalPanel(
+                                                  condition = "input.transportType === 'Bicycle'",
+                                                  selectInput("bicycleType", "Select Bicycle Type:", "", selected = "")
+                                                )
+                                       )
+                                     )
                             )
                           )
                  )
+  )
 )
 
 # Server function definition
@@ -505,17 +497,23 @@ server <- function(input, output, session) {
       addMarkers(lng = hotel_data_sub %>% filter(level == "level1") %>% pull(longitude), 
                  lat = hotel_data_sub %>% filter(level == "level1") %>% pull(latitude), 
                  popup = hotel_data_sub %>% filter(level == "level1") %>% pull(info), 
-                 group = "level1") %>% 
+                 group = "level1",
+                 clusterOptions = markerClusterOptions(),
+                 icon = customIcon1) %>% 
       # Add markers for level2
       addMarkers(lng = hotel_data_sub %>% filter(level == "level2") %>% pull(longitude), 
                  lat = hotel_data_sub %>% filter(level == "level2") %>% pull(latitude), 
                  popup = hotel_data_sub %>% filter(level == "level2") %>% pull(info), 
-                 group = "level2") %>% 
+                 group = "level2",
+                 clusterOptions = markerClusterOptions(),
+                 icon = customIcon1) %>% 
       # Add markers for level3
       addMarkers(lng = hotel_data_sub %>% filter(level == "level3") %>% pull(longitude), 
                  lat = hotel_data_sub %>% filter(level == "level3") %>% pull(latitude), 
                  popup = hotel_data_sub %>% filter(level == "level3") %>% pull(info), 
-                 group = "level3") %>% 
+                 group = "level3",
+                 clusterOptions = markerClusterOptions(),
+                 icon = customIcon1) %>% 
       # Set zoom levels for group level3
       groupOptions("level3", zoomLevels = 18:20) %>% 
       # Set zoom levels for group level2
@@ -526,7 +524,9 @@ server <- function(input, output, session) {
   output$poi_map <- renderLeaflet({
     m <- leaflet(data()) %>%
       addTiles() %>%
-      addMarkers(lng = ~Longitude, lat = ~Latitude, popup = ~paste(Title, ": ", Description))
+      addMarkers(lng = ~Longitude, lat = ~Latitude, popup = ~paste(Title, ": ", Description),
+                 clusterOptions = markerClusterOptions(),
+                 icon = customIcon2)
     m
   })
   

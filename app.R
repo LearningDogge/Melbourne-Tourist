@@ -13,7 +13,6 @@ list_packages <-
     'shinyWidgets',
     'tidyverse',
     "sf",
-    "rgdal",
     "shinyjs",
     "ggiraph"
   )
@@ -36,7 +35,6 @@ library(maps)
 library(scales)
 library(shinydashboard)
 library(sf)
-library(rgdal)
 library(shinyjs)
 library(ggiraph)
 

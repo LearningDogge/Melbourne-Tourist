@@ -181,7 +181,7 @@ themes_tab <- tabPanel(
     girafeOutput('plot_themes'),
     tableauPublicViz(id = 'tableauViz',
                      url = 'https://public.tableau.com/views/POI_16978604229170/POICategories?:language=zh-CN&publish=yes&:display_count=n&:origin=viz_share_link',
-                     width = "400px"),
+                     height = "400px"),
   )
 )
 
@@ -741,7 +741,7 @@ server <- function(input, output, session) {
         hjust = 1
       ))
     
-    girafe(ggobj = p, height_svg = 3)
+    girafe(ggobj = p, height_svg = 6)
   })
   
   # React to clicks on the bar chart

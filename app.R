@@ -23,6 +23,7 @@ library(shinydashboard)
 library(sf)
 library(rgdal)
 library(shinyjs)
+library('ggiraph')
 
 source('tableau-in-shiny-v1.0.R')
 
@@ -128,7 +129,7 @@ themes_tab <- tabPanel(
     tableauPublicViz(
       id='tableauViz',       
       url='https://public.tableau.com/views/POI_16978604229170/POICategories?:language=zh-CN&publish=yes&:display_count=n&:origin=viz_share_link',
-      height="300px"
+      width="400px"
     ),
   )
 )
@@ -323,6 +324,8 @@ ui <- fluidPage(
                mainPanel(
                  div(
                    leafletOutput("poi_map", width = "150%", height = "85vh"),
+                   title='POI Categories',
+                   themes_tab,
                    tags$div(id = "poi_map_controls", class = "map-controls",
                             imageOutput("weather_icon"),
                             textOutput("weather_main"),
@@ -333,9 +336,7 @@ ui <- fluidPage(
                             textOutput("uvi"),
                             textOutput("clouds"),
                             textOutput("weather_description")
-                   ),
-                   title='POI Categories',
-                   themes_tab
+                   )
                  )
                )
              )),

@@ -1160,6 +1160,8 @@ server <- function(input, output, session) {
       data_source <- bus_data
     } else if (selected_transport_type == "Tram") {
       data_source <- tram_data
+    } else {
+      data_source <- NULL
     }
     
     # Capture the current selections

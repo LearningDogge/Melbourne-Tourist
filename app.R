@@ -282,6 +282,8 @@ ui <- fluidPage(
          display: flex;
          flex-direction: column;
          align-items: center;
+         max-height: 500px;
+         overflow: auto;
        }
        #map-controls label,
         #customRadioGroup,
